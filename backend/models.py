@@ -1,14 +1,57 @@
 from datetime import datetime, UTC
-from sqlmodel import Field, Session, SQLModel, create_engine
+from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
 from pydantic import EmailStr
+
+
+class GroupMember(SQLModel, table = True):
+    id: int|None = Field(default= None, primary_key=True)
+    group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+
+    user: Mapped["User"] = Relationship(back_populates="memberships")
+
+    def to_read(self, user):
+        assert self.id is not None
+
+        return GroupMemberRead(
+            id = self.id,
+            user = UserRead.model_validate(user)
+        )
+
+class GroupMemberRead(SQLModel):
+    id: int
+    user: "UserRead"
+
+class GroupMemberCreate(SQLModel):
+    user_id: int
+
 
 class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
     name: str = Field(index = True)
     email: EmailStr = Field(unique=True, index=True)
     hashed_password: str
+
+    # explain: this is a one to many relationship where one user can pay for many expenses. 
+    # The back_populates is used to specify the attribute on the other side of the relationship that will be used to access the related objects. 
+    # In this case, it will be the "paid_by_user" attribute on the Expenses model.
+    expenses_paid: Mapped[list["Expenses"]] = Relationship(back_populates="paid_by_user") 
+    groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember)
+    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user")
+    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="user")
+
+    def to_read(self):
+        assert self.id is not None
+
+        return UserRead(
+            id = self.id,
+            name = self.name,
+            email = self.email
+        )
+
 
 class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
     id: int
@@ -24,32 +67,16 @@ class Group(SQLModel, table= True):
     id: int|None = Field(default= True, primary_key=True)
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
 
+    members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember)
+    expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group")
+
+
 class GroupCreate(SQLModel):
     name:str
 
 class GroupRead(SQLModel):
     id: int
     name: str
-
-class GroupMember(SQLModel, table = True):
-    id: int|None = Field(default= None, primary_key=True)
-    group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
-    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
-
-    def to_read(self, user):
-        assert self.id is not None
-
-        return GroupMemberRead(
-            id = self.id,
-            user = UserRead.model_validate(user)
-        )
-
-class GroupMemberRead(SQLModel):
-    id: int
-    user: UserRead
-
-class GroupMemberCreate(SQLModel):
-    user_id: int
 
 class Expenses(SQLModel, table = True):
     id: int| None = Field(default= None, primary_key=True)
@@ -59,8 +86,13 @@ class Expenses(SQLModel, table = True):
     total_amount: float = Field(ge = 0)
     created_at: datetime = Field(default_factory= lambda : datetime.now(UTC))
 
+    paid_by_user : Mapped["User"] = Relationship(back_populates="expenses_paid")
+    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="expense")
+    group: Mapped["Group"] = Relationship(back_populates="expenses")
+
     def to_read(self, paid_by_user, group):
         assert self.id is not None
+        assert self.paid_by_user is not None
 
         return ExpenseRead(
             id = self.id,
@@ -92,6 +124,9 @@ class ExpenseSplits(SQLModel, table = True):
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     amount_owed: float
     amount_paid: float
+
+    expense: Mapped["Expenses"] = Relationship(back_populates="splits")
+    user: Mapped["User"] = Relationship(back_populates="splits")
 
     def to_read(self, user):
         assert self.id is not None

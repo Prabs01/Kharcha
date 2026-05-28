@@ -4,6 +4,7 @@ from fastapi import FastAPI, Query,Body, HTTPException
 
 import models
 from sqlmodel import select
+from sqlalchemy.orm import selectinload
 
 #lifecycle manager
 #before yield - At startup
@@ -114,48 +115,47 @@ async def add_member_to_group(
     session: models.SessionDep,
     user: models.GroupMemberCreate = Body(),
 ):
-    group_member = models.GroupMember(group_id= group_id, user_id = user.user_id)
-    db_user = session.exec(select(models.User).where(models.User.id == user.user_id)).first()
+    group = session.get(models.Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
 
-    if not db_user:
+    if not session.get(models.User, user.user_id):
         raise HTTPException(status_code=404, detail="User not found")
+
+    group_member = models.GroupMember(group_id= group_id, user_id = user.user_id)
 
     session.add(group_member)
     session.commit()
     session.refresh(group_member)
 
+    db_user = group_member.user
+
     if group_member.id is None:
         raise HTTPException(status_code=500, detail="Failed to create group member")
 
-    # convert User -> UserRead
-    user_read = models.UserRead.model_validate(db_user)
+    return group_member.to_read(db_user)
 
-    return models.GroupMemberRead(id=int(group_member.id), user=user_read)
-
-@app.get(path = '/groups/{group_id}/members', response_model= list[models.GroupMemberRead])
+@app.get(path = '/groups/{group_id}/members', response_model= list[models.UserRead])
 async def read_members_from_group(
     group_id: int,
     session: models.SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le=100)] = 100,
 ):
-    if not session.get(models.Group, group_id):
-        raise HTTPException(status_code = 404, detail = "Group not found")
+    
+    db_group = session.get(models.Group, group_id)
 
-    members = session.exec(
-        select(models.GroupMember).where(models.GroupMember.group_id == group_id).offset(offset).limit(limit)
-    ).all()
+    if not db_group:
+        raise HTTPException(status_code = 404, detail="Group not found")
+
+    members = db_group.members[offset: offset+limit]
+
     if not members:
         raise HTTPException(status_code = 404, detail="Members not found")
 
-    user_ids = [e.user_id for e in members if e.user_id is not None]
-    db_users = session.exec(select(models.User).where(models.User.id.in_(user_ids))).all() if user_ids else []  # ty:ignore[unresolved-attribute]
-    users_by_id = {u.id: u for u in db_users}
-
     output_members = []
     for member in members:
-        db_user = users_by_id[member.user_id]
-        output_member = member.to_read(db_user)
+        output_member = member.to_read()
         output_members.append(output_member)
     
     return output_members
@@ -166,6 +166,9 @@ async def delete_member_from_group(
     user_id: int,
     session: models.SessionDep,
 ):
+    if not session.get(models.Group, group_id):
+        raise HTTPException(status_code = 404, detail="Group not found")
+
     member = session.exec(
         select(models.GroupMember).where(models.GroupMember.group_id == group_id).where(models.GroupMember.user_id == user_id)
     ).first()
@@ -191,7 +194,10 @@ async def add_expense(
     if not db_user:
         raise HTTPException(status_code = 404, detail = "User not found")
 
-    if not session.exec(select(models.GroupMember).where(models.GroupMember.group_id == group_id).where(models.GroupMember.user_id == expense.paid_by_user_id)).first():
+    if not session.exec(
+        select(models.GroupMember).where(models.GroupMember.group_id == group_id
+            ).where(models.GroupMember.user_id == expense.paid_by_user_id)
+        ).first():
         raise HTTPException(status_code = 404, detail = "User is not a member of the group")
 
     db_expense = models.Expenses(
@@ -224,16 +230,15 @@ async def read_expenses_from_group(
         raise HTTPException(status_code = 404, detail = "Group not found")
 
     expenses = session.exec(
-        select(models.Expenses).where(models.Expenses.group_id == group_id).offset(offset).limit(limit)
+        select(models.Expenses)
+        .options(selectinload(models.Expenses.paid_by_user)) #eager loading to avoid n+1 problem, it will load the paid_by_user relationship in the same query as the expenses, so we don't have to make a separate query for each expense to get the user.
+        .where(models.Expenses.group_id == group_id)
+        .offset(offset).limit(limit)
     ).all()
-
-    db_user_ids = {e.paid_by_user_id for e in expenses if e.paid_by_user_id is not None}
-    db_users = session.exec(select(models.User).where(models.User.id.in_(db_user_ids))).all() if db_user_ids else []  # ty:ignore[unresolved-attribute]
-    users_by_id = {u.id: u for u in db_users}
 
     output_expenses = []
     for expense in expenses:
-        db_user = users_by_id[expense.paid_by_user_id]
+        db_user = expense.paid_by_user
         output_expense = expense.to_read(db_user, db_group)
         output_expenses.append(output_expense)
 
@@ -338,24 +343,19 @@ async def read_expense_splits(
     if not session.get(models.Group, group_id):
         raise HTTPException(status_code = 404, detail = "Group not found")
 
-    if not session.get(models.Expenses, expense_id):
-        raise HTTPException(status_code = 404, detail = "Expense not found")
+    expense = session.get(models.Expenses, expense_id)
+    if not expense:
+        raise HTTPException(status_code = 404, detail = "Expense not found") 
 
-    if not session.exec(select(models.Expenses).where(models.Expenses.id == expense_id).where(models.Expenses.group_id == group_id)).first():
+    if not expense.group_id == group_id:
         raise HTTPException(status_code = 404, detail = "Expense doesnot belong to the group")
 
-    splits = session.exec(
-        select(models.ExpenseSplits).where(models.ExpenseSplits.expense_id == expense_id).offset(offset).limit(limit)
-    ).all()
-
-    user_ids = {s.user_id for s in splits if s.user_id is not None}
-    db_users = session.exec(select(models.User).where(models.User.id.in_(user_ids))).all() if user_ids else []  # ty:ignore[unresolved-attribute]
-    users_by_id = {u.id: u for u in db_users}   
+    splits = expense.splits[offset: offset+limit]
 
     output_splits = []
 
     for split in splits:
-        db_user = users_by_id[split.user_id]
+        db_user = split.user
         db_split = split.to_read(db_user)
         output_splits.append(db_split)
 
