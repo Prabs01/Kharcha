@@ -11,7 +11,8 @@ class GroupMember(SQLModel, table = True):
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
 
-    user: Mapped["User"] = Relationship(back_populates="memberships")
+    group: Mapped["Group"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "members,user"})
+    user: Mapped["User"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "groups,members"})
 
     def to_read(self, user):
         assert self.id is not None
@@ -39,8 +40,8 @@ class User(SQLModel, table = True):
     # The back_populates is used to specify the attribute on the other side of the relationship that will be used to access the related objects. 
     # In this case, it will be the "paid_by_user" attribute on the Expenses model.
     expenses_paid: Mapped[list["Expenses"]] = Relationship(back_populates="paid_by_user") 
-    groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember)
-    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user")
+    groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user,group"})
+    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user", sa_relationship_kwargs={"overlaps": "groups"})
     splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="user")
 
     def to_read(self):
@@ -67,7 +68,8 @@ class Group(SQLModel, table= True):
     id: int|None = Field(default= True, primary_key=True)
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
 
-    members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember)
+    members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user"})
+    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="group", sa_relationship_kwargs={"overlaps": "members,user"})
     expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group")
 
 

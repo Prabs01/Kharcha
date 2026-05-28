@@ -47,7 +47,7 @@ async def create_user(user: models.UserCreate, session:models.SessionDep):
 async def read_users(
     session: models.SessionDep,
     offset: int = 0,
-    limit: Annotated[int , Query(le=100)] = 100,
+    limit: Annotated[int , Query(ge=1,le=100)] = 100,
 ):
     users = session.exec(select(models.User).offset(offset).limit(limit)).all()
     return users
@@ -124,6 +124,9 @@ async def add_member_to_group(
 
     group_member = models.GroupMember(group_id= group_id, user_id = user.user_id)
 
+    if session.exec(select(models.GroupMember).where(models.GroupMember.group_id == group_id).where(models.GroupMember.user_id == user.user_id)).first():
+        raise HTTPException(status_code=400, detail="User is already a member of the group")
+
     session.add(group_member)
     session.commit()
     session.refresh(group_member)
@@ -148,15 +151,17 @@ async def read_members_from_group(
     if not db_group:
         raise HTTPException(status_code = 404, detail="Group not found")
 
-    members = db_group.members[offset: offset+limit]
+    statement = (
+    select(models.User)
+    .join(models.GroupMember)
+    .where(models.GroupMember.group_id == group_id)
+    .offset(offset)
+    .limit(limit)
+)
+    members = session.exec(statement).all()
 
-    if not members:
-        raise HTTPException(status_code = 404, detail="Members not found")
 
-    output_members = []
-    for member in members:
-        output_member = member.to_read()
-        output_members.append(output_member)
+    output_members = [member.to_read() for member in members]
     
     return output_members
 
@@ -198,7 +203,7 @@ async def add_expense(
         select(models.GroupMember).where(models.GroupMember.group_id == group_id
             ).where(models.GroupMember.user_id == expense.paid_by_user_id)
         ).first():
-        raise HTTPException(status_code = 404, detail = "User is not a member of the group")
+        raise HTTPException(status_code = 400, detail = "User is not a member of the group")
 
     db_expense = models.Expenses(
         group_id = group_id,
@@ -260,7 +265,7 @@ async def read_expense(
         raise HTTPException(status_code = 404, detail = "Expense not found")
 
     if not expense.group_id == group_id:
-        raise HTTPException(status_code = 404, detail = "Expense doesnot belong to the group")
+        raise HTTPException(status_code = 404, detail = "Expense does not belong to the group")
 
     db_user = session.get(models.User, expense.paid_by_user_id)
     
@@ -283,7 +288,7 @@ async def delete_expense(
         raise HTTPException(status_code = 404, detail = "Expense not found")
 
     if not expense.group_id == group_id:
-        raise HTTPException(status_code = 404, detail = "Expense doesnot belong to the group")
+        raise HTTPException(status_code = 404, detail = "Expense does not belong to the group")
 
     session.delete(expense)
     session.commit()
@@ -298,8 +303,16 @@ async def add_expense_split(
     split: models.ExpenseSplitsCreate,
     session: models.SessionDep,
 ):
-    if not session.get(models.Expenses, expense_id):
+    if not session.get(models.Group, group_id):
+        raise HTTPException(status_code = 404, detail = "Group not found")
+
+    expense = session.get(models.Expenses, expense_id)
+
+    if not expense:
         raise HTTPException(status_code = 404, detail = "Expense not found")
+
+    if not expense.group_id == group_id:
+        raise HTTPException(status_code = 404, detail = "Expense does not belong to the group")
 
     db_user = session.get(models.User, split.user_id)
     if not db_user:
@@ -311,9 +324,6 @@ async def add_expense_split(
         amount_owed = split.amount_owed,
         amount_paid = split.amount_paid
     )
-
-    if not session.exec(select(models.Group).where(models.Group.id == group_id)).first():
-        raise HTTPException(status_code = 404, detail = "Group not found")
     
     
     if not session.exec(select(models.GroupMember).where(models.GroupMember.group_id == group_id).where(models.GroupMember.user_id == split.user_id)).first():
@@ -350,7 +360,12 @@ async def read_expense_splits(
     if not expense.group_id == group_id:
         raise HTTPException(status_code = 404, detail = "Expense doesnot belong to the group")
 
-    splits = expense.splits[offset: offset+limit]
+    splits = session.exec(
+        select(models.ExpenseSplits)
+        .options(selectinload(models.ExpenseSplits.user))
+        .where(models.ExpenseSplits.expense_id == expense_id)
+        .offset(offset).limit(limit)
+    ).all()
 
     output_splits = []
 
