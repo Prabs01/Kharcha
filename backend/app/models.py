@@ -1,9 +1,10 @@
+from enum import Enum
 from datetime import datetime, UTC
 from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
 from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
-from pydantic import EmailStr
+from pydantic import EmailStr, model_validator
 
 
 class GroupMember(SQLModel, table = True):
@@ -80,6 +81,16 @@ class GroupRead(SQLModel):
     id: int
     name: str
 
+class SplitMethod(str, Enum):
+    EQUAL = "equal"
+    EXACT = "exact"
+    PERCENTAGE = "percentage"
+
+class SplitPartipant(SQLModel):
+    user_id: int
+    percentage:float | None = None
+    amount: float | None = None
+
 class Expenses(SQLModel, table = True):
     id: int| None = Field(default= None, primary_key=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
@@ -106,7 +117,6 @@ class Expenses(SQLModel, table = True):
         )
 
 
-
 class ExpenseRead(SQLModel):
     id: int
     group: GroupRead
@@ -119,6 +129,18 @@ class ExpenseCreate(SQLModel):
     paid_by_user_id: int
     title: str 
     total_amount: float = Field(ge = 0)
+    split_method: SplitMethod = Field(default=SplitMethod.EQUAL)
+    split_participants: list[SplitPartipant] | None = None
+
+    @model_validator(mode = "after")
+    def validate_split_participants(self):
+        if self.split_method in {
+            SplitMethod.EXACT,
+            SplitMethod.PERCENTAGE
+        } and not self.split_participants:
+            raise ValueError("split_participants is required for EXACT and PERCENTAGE split methods")
+
+        return self
 
 class ExpenseSplits(SQLModel, table = True):
     id: int|None = Field(default= None, primary_key=True)
@@ -126,7 +148,7 @@ class ExpenseSplits(SQLModel, table = True):
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     amount_owed: float
     amount_paid: float
-
+ 
     expense: Mapped["Expenses"] = Relationship(back_populates="splits")
     user: Mapped["User"] = Relationship(back_populates="splits")
 
@@ -150,7 +172,6 @@ class ExpenseSplitsRead(SQLModel):
     user: UserRead
     amount_owed: float
     amount_paid: float
-
 
 sqlite_file_name = "database.db" 
 sqlite_url  = f"sqlite:///{sqlite_file_name}"

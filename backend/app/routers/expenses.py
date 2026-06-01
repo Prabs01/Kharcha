@@ -3,6 +3,7 @@ import app.models as models
 from sqlmodel import select
 from typing import Annotated
 from sqlalchemy.orm import selectinload
+import app.services.expenses as expense_services
 
 
 router = APIRouter(tags=["expenses"])
@@ -33,7 +34,7 @@ async def add_expense(
         group_id = group_id,
         paid_by_user_id = expense.paid_by_user_id,
         title = expense.title,
-        total_amount = expense.total_amount
+        total_amount = expense.total_amount,
     )  
 
     session.add(db_expense)
@@ -44,6 +45,7 @@ async def add_expense(
         raise HTTPException(status_code = 500, detail = "Failed to create expense") 
 
     output_expense = db_expense.to_read(db_user, db_group)
+    expense_services.split_expense(db_expense, expense.split_method, expense.split_participants, session)
 
     return output_expense
     

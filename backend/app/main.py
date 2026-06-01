@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import app.models as models
 
-from app.routers import users, groups
+from app.routers import users, groups, expenses
 
 #lifecycle manager
 #before yield - At startup
@@ -16,7 +16,7 @@ app = FastAPI(lifespan= lifespan)
 
 app.include_router(users.router)
 app.include_router(groups.router)
-
+app.include_router(expenses.router)
 
 @app.get('/')
 async def home():
