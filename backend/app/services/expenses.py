@@ -1,6 +1,5 @@
-from enum import Enum
 from typing import List
-from app.models import Expenses, ExpenseSplits, User, Group, SplitMethod, SplitPartipant
+from app.models import Expenses, ExpenseSplits, SplitMethod, SplitPartipant
 
 from fastapi import HTTPException
 from app.models import SessionDep

@@ -12,8 +12,8 @@ class GroupMember(SQLModel, table = True):
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
 
-    group: Mapped["Group"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "members,user"})
-    user: Mapped["User"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "groups,members"})
+    group: Mapped["Group"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "members,user", "cascade": "all, delete"})
+    user: Mapped["User"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"overlaps": "groups,members", "cascade": "all, delete"})
 
     def to_read(self, user):
         assert self.id is not None
@@ -40,10 +40,10 @@ class User(SQLModel, table = True):
     # explain: this is a one to many relationship where one user can pay for many expenses. 
     # The back_populates is used to specify the attribute on the other side of the relationship that will be used to access the related objects. 
     # In this case, it will be the "paid_by_user" attribute on the Expenses model.
-    expenses_paid: Mapped[list["Expenses"]] = Relationship(back_populates="paid_by_user") 
-    groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user,group"})
-    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user", sa_relationship_kwargs={"overlaps": "groups"})
-    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="user")
+    expenses_paid: Mapped[list["Expenses"]] = Relationship(back_populates="paid_by_user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a user is deleted, all associated expenses will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
+    groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user,group", "cascade": "all, delete"})
+    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user", sa_relationship_kwargs={"overlaps": "groups", "cascade": "all, delete-orphan"})
+    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a user is deleted, all associated splits will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
 
     def to_read(self):
         assert self.id is not None
@@ -69,9 +69,9 @@ class Group(SQLModel, table= True):
     id: int|None = Field(default= True, primary_key=True)
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
 
-    members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user"})
-    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="group", sa_relationship_kwargs={"overlaps": "members,user"})
-    expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group")
+    members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user", "cascade": "all, delete"})
+    memberships: Mapped[list[GroupMember]] = Relationship(back_populates="group", sa_relationship_kwargs={"overlaps": "members,user", "cascade": "all, delete-orphan"})
+    expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated expenses will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
 
 
 class GroupCreate(SQLModel):
@@ -94,13 +94,13 @@ class SplitPartipant(SQLModel):
 class Expenses(SQLModel, table = True):
     id: int| None = Field(default= None, primary_key=True)
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
-    paid_by_user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    paid_by_user_id: int = Field(foreign_key="user.id", ondelete="RESTRICT") 
     title: str = Field(index = True)
     total_amount: float = Field(ge = 0)
     created_at: datetime = Field(default_factory= lambda : datetime.now(UTC))
 
     paid_by_user : Mapped["User"] = Relationship(back_populates="expenses_paid")
-    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="expense")
+    splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="expense", sa_relationship_kwargs={"cascade": "all, delete-orphan"})#This means that when an expense is deleted, all associated splits will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
     group: Mapped["Group"] = Relationship(back_populates="expenses")
 
     def to_read(self, paid_by_user, group):
@@ -144,7 +144,7 @@ class ExpenseCreate(SQLModel):
 
 class ExpenseSplits(SQLModel, table = True):
     id: int|None = Field(default= None, primary_key=True)
-    expense_id: int = Field(foreign_key="expenses.id", ondelete="CASCADE")
+    expense_id: int = Field(foreign_key="expenses.id", ondelete="CASCADE", nullable=False) #expense_id should not be nullable because every split must be associated with an expense
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     amount_owed: float
     amount_paid: float
