@@ -30,6 +30,9 @@ class GroupMemberRead(SQLModel):
 class GroupMemberCreate(SQLModel):
     user_id: int
 
+class UserSummary(SQLModel):
+    id: int
+    name: str
 
 class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
@@ -54,6 +57,14 @@ class User(SQLModel, table = True):
             email = self.email
         )
 
+    def to_summary(self):
+        assert self.id is not None
+
+        return UserSummary(
+            id = self.id,
+            name = self.name
+        )
+
 
 class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
     id: int
@@ -72,7 +83,7 @@ class Group(SQLModel, table= True):
     members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user", "cascade": "all, delete"})
     memberships: Mapped[list[GroupMember]] = Relationship(back_populates="group", sa_relationship_kwargs={"overlaps": "members,user", "cascade": "all, delete-orphan"})
     expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated expenses will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
-
+    settlements: Mapped[list["Settlement"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated settlements will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
 
 class GroupCreate(SQLModel):
     name:str
@@ -172,6 +183,48 @@ class ExpenseSplitsRead(SQLModel):
     user: UserRead
     amount_owed: float
     amount_paid: float
+
+class SettlementRead(SQLModel):
+    from_user: UserSummary
+    to_user: UserSummary
+    amount: float
+
+class Settlement_status(str, Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+
+class Settlement(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+
+    group_id: int = Field(
+        foreign_key="group.id",
+        ondelete="CASCADE"
+    )
+
+    from_user_id: int = Field(
+        foreign_key="user.id",
+        ondelete="RESTRICT"
+    )
+
+    to_user_id: int = Field(
+        foreign_key="user.id",
+        ondelete="RESTRICT"
+    )
+
+    status: Settlement_status = Field(default=Settlement_status.COMPLETED)
+
+    amount: float
+
+    settled_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC)
+    )
+    group: Mapped["Group"] = Relationship(back_populates="settlements")
+    
+class SettlementCreate(SQLModel):
+    from_user_id: int
+    to_user_id: int
+    amount: float
 
 sqlite_file_name = "database.db" 
 sqlite_url  = f"sqlite:///{sqlite_file_name}"
