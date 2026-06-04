@@ -42,18 +42,58 @@ def test_root_route(client):
     assert response.json() == {"message": "welcome"}
 
 
-def test_create_list_get_and_delete_user(client):
-    create_response = client.post(
+def add_user(client, name, email, password):
+    response = client.post(
         "/users",
         json={
-            "name": "Alice",
-            "email": "alice@example.com",
-            "password": "secret",
+            "name": name,
+            "email": email,
+            "password": password,
         },
     )
+    assert response.status_code == 200
+    return response.json()
 
-    assert create_response.status_code == 200
-    user = create_response.json()
+
+def add_group(client, name):
+    response = client.post("/groups", json={"name": name})
+    assert response.status_code == 200
+    return response.json()
+
+def add_member(client, group_id, user_id):
+    response = client.post(f"/groups/{group_id}/members", json={"user_id": user_id})
+    assert response.status_code == 200
+    return response.json()
+
+def add_expense(client, group_id, paid_by_user_id, title, total_amount, split_method = "equal", split_participants = None):
+    response = client.post(
+        f"/groups/{group_id}/expenses",
+        json={
+            "paid_by_user_id": paid_by_user_id,
+            "title": title,
+            "total_amount": total_amount,
+            "split_method": split_method,
+            "split_participants": split_participants
+        },
+    )
+    assert response.status_code == 200
+    return response.json()
+
+def add_split(client, group_id, expense_id, user_id, amount_owed, amount_paid):
+    response = client.post(
+        f"/groups/{group_id}/expenses/{expense_id}/splits",
+        json={
+            "user_id": user_id,
+            "amount_owed": amount_owed,
+            "amount_paid": amount_paid,
+        },
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_create_list_get_and_delete_user(client):
+    user = add_user(client, "Alice", "alice@example.com", "secret")
     assert user["name"] == "Alice"
     assert user["email"] == "alice@example.com"
     assert "password" not in user
@@ -76,21 +116,11 @@ def test_create_list_get_and_delete_user(client):
 
 
 def test_create_group_and_add_member(client):
-    user_response = client.post(
-        "/users",
-        json={
-            "name": "Bob",
-            "email": "bob@example.com",
-            "password": "secret",
-        },
-    )
-    group_response = client.post("/groups", json={"name": "Trip"})
+    user = add_user(client, "Bob", "bob@example.com", "secret")
+    group = add_group(client, "Trip")
 
-    assert user_response.status_code == 200
-    assert group_response.status_code == 200
-
-    user_id = user_response.json()["id"]
-    group_id = group_response.json()["id"]
+    user_id = user["id"]
+    group_id = group["id"]
 
     member_response = client.post(f"/groups/{group_id}/members", json={"user_id": user_id})
 
@@ -102,57 +132,93 @@ def test_create_group_and_add_member(client):
 
 
 def test_create_expense_and_splits(client):
-    user_response = client.post(
-        "/users",
-        json={
-            "name": "Charlie",
-            "email": "charlie@example.com",
-            "password": "secret",
-        },
-    )
-    group_response = client.post("/groups", json={"name": "Dinner"})
+    user = add_user(client, "Charlie", "charlie@example.com", "secret")
+    group = add_group(client, "Dinner")
 
-    assert user_response.status_code == 200
-    assert group_response.status_code == 200
+    user_id = user["id"]
+    group_id = group["id"]
 
-    user_id = user_response.json()["id"]
-    group_id = group_response.json()["id"]
-
-    member_response = client.post(f"/groups/{group_id}/members", json={"user_id": user_id})
-
-    assert member_response.status_code == 200
-    member = member_response.json()
+    member = add_member(client, group_id, user_id)
     assert member["id"] > 0
     assert member["user"]["id"] == user_id
     assert member["user"]["name"] == "Charlie"
 
-    expense_response = client.post(
-        f"/groups/{group_id}/expenses",
-        json={
-            "paid_by_user_id": user_id, 
-            "title": "Pizza",
-            "total_amount": 300.0,
-        },
-    )
+    expense = add_expense(client, group_id, user_id, "Pizza", 300.0)
 
-    assert expense_response.status_code == 200
-    expense = expense_response.json()
     assert expense["title"] == "Pizza"
     assert expense["total_amount"] == 300.0
     assert expense["paid_by_user"]["id"] == user_id
 
     expense_id = expense["id"]
-    split_response = client.post(
-        f"/groups/{group_id}/expenses/{expense_id}/splits",
-        json={
-            "user_id": user_id,
-            "amount_owed": 150.0,
-            "amount_paid": 300.0,
-        },
-    )
-    assert split_response.status_code == 200
-    split = split_response.json()
+    split = add_split(client, group_id, expense_id, user_id, 150.0, 300.0)
+
     assert split["user"]["id"] == user_id
     assert split["amount_owed"] == 150.0
     assert split["amount_paid"] == 300.0
 
+def test_calculate_balance(client):
+    # Create users
+    user1 = add_user(client, "Dave", "Dave@example.com", "secret")
+    user2 = add_user(client, "Eve", "Eve@example.com", "secret")
+
+    # Create group
+    group = add_group(client, "Movie Night")
+    group_id = group["id"]
+
+    # Add members to group
+    add_member(client, group_id, user1["id"])
+    add_member(client, group_id, user2["id"])
+
+    # Create expense
+    add_expense(client, group_id, user1["id"], "Tickets", 200.0)
+    add_expense(client, group_id, user2["id"], "Popcorn", 100.0, split_method = "exact", split_participants = [
+        {"user_id": user1["id"],
+        "amount": 30.0},
+        {"user_id": user2["id"],
+        "amount": 70.0}
+    ])
+    add_expense(client, group_id, user1["id"], "Drinks", 50.0, split_method = "percentage", split_participants = [
+        {"user_id": user1["id"],
+        "percentage": 25.0},
+        {"user_id": user2["id"],
+        "percentage": 75.0}
+    ])
+
+    # Calculate balance
+    balance_response = client.get(f"/groups/{group_id}/balances")
+    assert balance_response.status_code == 200
+    balances = balance_response.json()["balances"]
+     
+    user1_balance = next(b for b in balances if b["user_id"] == user1["id"])
+    user2_balance = next(b for b in balances if b["user_id"] == user2["id"])
+
+    assert abs(user1_balance["balance"] - 107.5) < 1e-6
+    assert abs(user2_balance["balance"] + 107.5) < 1e-6 
+
+
+def test_calculate_settlement(client):
+    # Create users
+    user1 = add_user(client, "Frank", "Frank@example.com", "secret")
+    user2 = add_user(client, "Grace", "Grace@example.com", "secret")
+
+    # Create group
+    group = add_group(client, "Concert")
+    group_id = group["id"]
+
+    # Add members to group
+    add_member(client, group_id, user1["id"])
+    add_member(client, group_id, user2["id"])
+
+    # Create expenses
+    add_expense(client, group_id, user1["id"], "Tickets", 300.0)
+    add_expense(client, group_id, user2["id"], "Food", 150.0)
+
+    # Calculate settlement
+    settlement_response = client.get(f"/groups/{group_id}/settlements/suggested")
+    assert settlement_response.status_code == 200
+    settlements = settlement_response.json()["settlements"]
+    assert len(settlements) == 1
+    settlement = settlements[0]
+    assert settlement["from_user_id"] == user2["id"]
+    assert settlement["to_user_id"] == user1["id"]
+    assert abs(settlement["amount"] - 75.0) < 1e-6

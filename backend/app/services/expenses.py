@@ -36,6 +36,9 @@ def split_expense_equally(expense: Expenses, session:SessionDep):
                 amount_paid = total_amount
             )
             session.add(split)
+
+            if not split.id:
+                session.flush()  # Ensure the split ID is generated
             print(f"Split added: {split}")
 
         else:
@@ -50,6 +53,9 @@ def split_expense_equally(expense: Expenses, session:SessionDep):
                 amount_paid = 0
             )
             session.add(split)
+
+            if not split.id:
+                session.flush()  # Ensure the split ID is generated
             print(f"Split added: {split}")
 
     session.commit()
@@ -83,6 +89,8 @@ def split_expense_exact(expense: Expenses, split_participants: List[SplitPartipa
             amount_paid = total_split_amount if split.user_id == expense.paid_by_user_id else 0
         )
         session.add(db_split)
+        if not db_split.id:
+            session.flush()  # Ensure the split ID is generated
 
     session.commit()
 
@@ -115,5 +123,6 @@ def split_expense_percentage(expense: Expenses, split_participants: List[SplitPa
             amount_paid = total_amount if split.user_id == expense.paid_by_user_id else 0
         )
         session.add(db_split)
-
+        if not db_split.id:
+            session.flush()  # Ensure the split ID is generated
     session.commit()
