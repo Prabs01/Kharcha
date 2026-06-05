@@ -38,7 +38,7 @@ class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
     name: str = Field(index = True)
     email: EmailStr = Field(unique=True, index=True)
-    hashed_password: str
+    hashed_password: str = Field(nullable=False) #hashed_password should not be nullable because every user must have a password
 
     # explain: this is a one to many relationship where one user can pay for many expenses. 
     # The back_populates is used to specify the attribute on the other side of the relationship that will be used to access the related objects. 
@@ -74,7 +74,11 @@ class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
 class UserCreate(SQLModel):
     name: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
+
+class Token(SQLModel):
+    access_token: str
+    token_type: str
 
 class Group(SQLModel, table= True):
     id: int|None = Field(default= True, primary_key=True)

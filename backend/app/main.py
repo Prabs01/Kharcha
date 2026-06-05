@@ -23,7 +23,3 @@ app.include_router(analytics.router)
 @app.get('/')
 async def home():
     return{"message": "welcome"}
-
-
-
-
