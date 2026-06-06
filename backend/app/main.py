@@ -15,7 +15,7 @@ from alembic import command
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.create_db_and_table()
-    alembic_cfg = Config("alembic.ini")
+    alembic_cfg = Config("../alembic.ini")
     command.upgrade(alembic_cfg, "head")
     yield
 
