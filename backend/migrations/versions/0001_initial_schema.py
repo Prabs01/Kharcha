@@ -19,61 +19,71 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "group",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-    )
-    op.create_index(op.f("ix_group_name"), "group", ["name"], unique=False)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    existing_tables = inspector.get_table_names()
 
-    op.create_table(
-        "user",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("email", sa.String(), nullable=False),
-        sa.Column("hashed_password", sa.String(), nullable=False),
-        sa.UniqueConstraint("email"),
-    )
-    op.create_index(op.f("ix_user_email"), "user", ["email"], unique=False)
-    op.create_index(op.f("ix_user_name"), "user", ["name"], unique=False)
+    if "group" not in existing_tables:
+        op.create_table(
+            "group",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("name", sa.String(), nullable=False),
+        )
+        op.create_index(op.f("ix_group_name"), "group", ["name"], unique=False)
 
-    op.create_table(
-        "groupmember",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
-    )
+    if "user" not in existing_tables:
+        op.create_table(
+            "user",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("name", sa.String(), nullable=False),
+            sa.Column("email", sa.String(), nullable=False),
+            sa.Column("hashed_password", sa.String(), nullable=False),
+            sa.UniqueConstraint("email"),
+        )
+        op.create_index(op.f("ix_user_email"), "user", ["email"], unique=False)
+        op.create_index(op.f("ix_user_name"), "user", ["name"], unique=False)
 
-    op.create_table(
-        "expenses",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("paid_by_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("title", sa.String(), nullable=False),
-        sa.Column("total_amount", sa.Float(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-    )
-    op.create_index(op.f("ix_expenses_title"), "expenses", ["title"], unique=False)
+    if "groupmember" not in existing_tables:
+        op.create_table(
+            "groupmember",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
+        )
 
-    op.create_table(
-        "expensesplits",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("expense_id", sa.Integer(), sa.ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("amount_owed", sa.Float(), nullable=False),
-        sa.Column("amount_paid", sa.Float(), nullable=False),
-    )
+    if "expenses" not in existing_tables:
+        op.create_table(
+            "expenses",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("paid_by_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
+            sa.Column("title", sa.String(), nullable=False),
+            sa.Column("total_amount", sa.Float(), nullable=False),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+        )
+        op.create_index(op.f("ix_expenses_title"), "expenses", ["title"], unique=False)
 
-    op.create_table(
-        "settlement",
-        sa.Column("id", sa.Integer(), primary_key=True, nullable=False),
-        sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("from_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("to_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("status", sa.String(), nullable=False),
-        sa.Column("amount", sa.Float(), nullable=False),
-        sa.Column("settled_at", sa.DateTime(), nullable=False),
-    )
+    if "expensesplits" not in existing_tables:
+        op.create_table(
+            "expensesplits",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("expense_id", sa.Integer(), sa.ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("amount_owed", sa.Float(), nullable=False),
+            sa.Column("amount_paid", sa.Float(), nullable=False),
+        )
+
+    if "settlement" not in existing_tables:
+        op.create_table(
+            "settlement",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("group_id", sa.Integer(), sa.ForeignKey("group.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("from_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
+            sa.Column("to_user_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="RESTRICT"), nullable=False),
+            sa.Column("status", sa.String(), nullable=False),
+            sa.Column("amount", sa.Float(), nullable=False),
+            sa.Column("settled_at", sa.DateTime(), nullable=False),
+        )
 
 
 def downgrade() -> None:
