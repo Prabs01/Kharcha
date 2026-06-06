@@ -5,12 +5,18 @@ import app.models as models
 
 from app.routers import users, groups, expenses, analytics
 
+from alembic.config import Config
+from alembic import command
+
+
 #lifecycle manager
 #before yield - At startup
 #after yield - At shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.create_db_and_table()
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
     yield
 
 app = FastAPI(lifespan= lifespan)
