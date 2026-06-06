@@ -55,8 +55,22 @@ def add_user(client, name, email, password):
     return response.json()
 
 
-def add_group(client, name):
-    response = client.post("/groups", json={"name": name})
+def login(client, email, password):
+    response = client.post(
+        "/users/token",
+        data={"username": email, "password": password},
+    )
+    assert response.status_code == 200
+    return response.json()["access_token"]
+
+
+def add_group(client, name, *, email, password):
+    token = login(client, email, password)
+    response = client.post(
+        "/groups",
+        json={"name": name},
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert response.status_code == 200
     return response.json()
 
@@ -117,31 +131,31 @@ def test_create_list_get_and_delete_user(client):
 
 def test_create_group_and_add_member(client):
     user = add_user(client, "Bob", "bob@example.com", "secret")
-    group = add_group(client, "Trip")
+    group = add_group(client, "Trip", email="bob@example.com", password="secret")
 
     user_id = user["id"]
     group_id = group["id"]
 
-    member_response = client.post(f"/groups/{group_id}/members", json={"user_id": user_id})
+    members_response = client.get(f"/groups/{group_id}/members")
+    assert members_response.status_code == 200
+    members = members_response.json()
+    assert len(members) == 1
+    assert members[0]["id"] == user_id
+    assert members[0]["name"] == "Bob"
 
-    assert member_response.status_code == 200
-    member = member_response.json()
-    assert member["id"] > 0
-    assert member["user"]["id"] == user_id
-    assert member["user"]["name"] == "Bob"
+    duplicate_response = client.post(
+        f"/groups/{group_id}/members",
+        json={"user_id": user_id},
+    )
+    assert duplicate_response.status_code == 400
 
 
 def test_create_expense_and_splits(client):
     user = add_user(client, "Charlie", "charlie@example.com", "secret")
-    group = add_group(client, "Dinner")
+    group = add_group(client, "Dinner", email="charlie@example.com", password="secret")
 
     user_id = user["id"]
     group_id = group["id"]
-
-    member = add_member(client, group_id, user_id)
-    assert member["id"] > 0
-    assert member["user"]["id"] == user_id
-    assert member["user"]["name"] == "Charlie"
 
     expense = add_expense(client, group_id, user_id, "Pizza", 300.0)
 
@@ -161,12 +175,10 @@ def test_calculate_balance(client):
     user1 = add_user(client, "Dave", "Dave@example.com", "secret")
     user2 = add_user(client, "Eve", "Eve@example.com", "secret")
 
-    # Create group
-    group = add_group(client, "Movie Night")
+    # Create group (creator is auto-added as a member)
+    group = add_group(client, "Movie Night", email="Dave@example.com", password="secret")
     group_id = group["id"]
 
-    # Add members to group
-    add_member(client, group_id, user1["id"])
     add_member(client, group_id, user2["id"])
 
     # Create expense
@@ -201,12 +213,10 @@ def test_calculate_settlement(client):
     user1 = add_user(client, "Frank", "Frank@example.com", "secret")
     user2 = add_user(client, "Grace", "Grace@example.com", "secret")
 
-    # Create group
-    group = add_group(client, "Concert")
+    # Create group (creator is auto-added as a member)
+    group = add_group(client, "Concert", email="Frank@example.com", password="secret")
     group_id = group["id"]
 
-    # Add members to group
-    add_member(client, group_id, user1["id"])
     add_member(client, group_id, user2["id"])
 
     # Create expenses

@@ -4,17 +4,30 @@ import app.models as models
 from sqlmodel import select
 from typing import Annotated
 
+from app.auth import CurrentUser
+
 router = APIRouter(tags=["groups"])
 
 
 #-----Group operations -----
 
 @router.post(path = "/groups", response_model=models.GroupRead)
-async def create_group(group: models.GroupCreate, session: models.SessionDep):
+async def create_group(
+    group: models.GroupCreate,
+    session: models.SessionDep,
+    current_user: CurrentUser,
+):
     db_group = models.Group(name=group.name)
     session.add(db_group)
     session.commit()
     session.refresh(db_group)
+
+    if db_group.id is None or current_user.id is None:
+        raise HTTPException(status_code=500, detail="Failed to create group")
+
+    session.add(models.GroupMember(group_id=db_group.id, user_id=current_user.id))
+    session.commit()
+
     return db_group
 
 @router.get(path = "/groups", response_model= list[models.GroupRead])

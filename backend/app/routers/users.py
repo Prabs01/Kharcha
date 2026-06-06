@@ -6,7 +6,12 @@ from typing import Annotated
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.auth import (hash_password, verify_password, create_access_token, verify_access_token, oauth2_scheme)
+from app.auth import (
+    CurrentUser,
+    hash_password,
+    verify_password,
+    create_access_token,
+)
 from app.config import settings
 
 
@@ -50,15 +55,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], sess
     return models.Token(access_token=access_token, token_type="bearer")
 
 @router.get("/me", response_model=models.UserRead)
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], session: models.SessionDep): #oatuh2_scheme is only for Swagger UI, it tells when you clicj on the "Authorize" button got to the "/users/token" endpoint to get the token and then use that token for the endpoints that require authentication. Depends() is used to declare dependencies for the endpoint. In this case, it is used to get the token from the request and the database session.
-    user_id = verify_access_token(token)
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
-
-    user = session.get(models.User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+async def read_current_user(current_user: CurrentUser):
+    return current_user
 
 
 @router.get('/', response_model = list[models.UserRead])

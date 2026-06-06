@@ -1,10 +1,13 @@
 from datetime import datetime, timedelta, UTC
+from typing import Annotated
 
 import jwt
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 
 from pwdlib import PasswordHash
 
+import app.models as models
 from app.config import settings
 
 password_hash = PasswordHash.recommended()
@@ -28,13 +31,27 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     encoded_jwt = jwt.encode(to_encode, settings.secret_key.get_secret_value(), algorithm=settings.algorithm)
     return encoded_jwt
 
-def verify_access_token(token: str) -> dict | None:
-    """Verifies a JWT access token and returns the decoded data if valid."""
+def verify_access_token(token: str) -> str | None:
+    """Verifies a JWT access token and returns the user id from `sub` if valid."""
     try:
         payload = jwt.decode(token, settings.secret_key.get_secret_value(), algorithms=[settings.algorithm])
         return payload.get("sub")
     except jwt.InvalidTokenError:
         return None
-    else:
-        return payload.get("sub")
-         
+
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: models.SessionDep,
+) -> models.User:
+    user_id = verify_access_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+
+    user = session.get(models.User, int(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+CurrentUser = Annotated[models.User, Depends(get_current_user)]
