@@ -16,20 +16,13 @@ import {
   removeGroupMember,
 } from '../api/groups'
 import { listUsers } from '../api/users'
+import { CurrencyAmount } from '../components/CurrencyAmount'
 import type { Expense, SplitMethod, SplitParticipant, User } from '../api/types'
 
 type Tab = 'expenses' | 'members' | 'balances' | 'settlements'
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
-
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
+  return new Date(iso).toLocaleDateString('en-NP', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -395,7 +388,7 @@ function ExpensesTab({
                 <span className="muted">{formatDate(expense.created_at)}</span>
               </div>
               <div className="list-item-meta">
-                <span className="amount">{formatCurrency(expense.total_amount)}</span>
+                <CurrencyAmount amount={expense.total_amount} />
                 <span className="muted">paid by {expense.paid_by_user.name}</span>
               </div>
               <button
@@ -538,12 +531,11 @@ function BalancesTab({
             <div key={b.user_id} className="list-item card balance-item">
               <div className="avatar">{name.charAt(0).toUpperCase()}</div>
               <strong>{name}</strong>
-              <span
+              <CurrencyAmount
+                amount={b.balance}
+                showPlus
                 className={`balance-amount ${isPositive ? 'positive' : ''} ${isNegative ? 'negative' : ''}`}
-              >
-                {isPositive && '+'}
-                {formatCurrency(b.balance)}
-              </span>
+              />
             </div>
           )
         })}
@@ -605,10 +597,10 @@ function SettlementsTab({
                 <span className="muted">pays</span>
                 <strong>{userName(members, s.to_user_id)}</strong>
               </div>
-              <span className="amount">{formatCurrency(s.amount)}</span>
+              <CurrencyAmount amount={s.amount} />
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="btn btn-accent btn-sm"
                 disabled={recordMutation.isPending}
                 onClick={() => recordMutation.mutate(s)}
               >
@@ -632,7 +624,7 @@ function SettlementsTab({
                   <span className="muted">→</span>
                   <strong>{userName(members, s.to_user_id)}</strong>
                 </div>
-                <span className="amount">{formatCurrency(s.amount)}</span>
+                <CurrencyAmount amount={s.amount} />
                 <span className="muted">{formatDate(s.settled_at)}</span>
               </div>
             ))}

@@ -36,8 +36,8 @@ export function DashboardPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Your groups</h1>
-          <p className="page-subtitle">Split bills and track who owes what</p>
+          <h1>Groups</h1>
+          <p className="page-subtitle">Split the bill, not the bond.</p>
         </div>
         <button
           type="button"
@@ -78,9 +78,8 @@ export function DashboardPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="empty-state card">
-          <div className="empty-icon">👥</div>
           <h2>No groups yet</h2>
-          <p>Create a group to start tracking shared expenses.</p>
+          <p>Create a group to start splitting expenses with friends.</p>
         </div>
       ) : (
         <div className="group-grid">

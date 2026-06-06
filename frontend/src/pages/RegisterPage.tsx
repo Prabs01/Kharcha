@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { getErrorMessage } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { Logo } from '../components/Logo'
 
 export function RegisterPage() {
   const { user, register } = useAuth()
@@ -28,11 +29,16 @@ export function RegisterPage() {
 
   return (
     <div className="auth-page">
+      <aside className="auth-brand-panel">
+        <Logo height={52} variant="dark" showTagline />
+        <p className="auth-slogan">Split the bill, not the bond.</p>
+        <p className="auth-nepali">खर्च — Kharcha</p>
+      </aside>
+
       <div className="auth-card">
         <div className="auth-header">
-          <span className="brand-icon lg">₹</span>
           <h1>Create account</h1>
-          <p>Start splitting expenses with friends</p>
+          <p>Expense splitting — made for Nepal</p>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>

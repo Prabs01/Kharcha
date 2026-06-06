@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { Logo } from './Logo'
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -14,8 +15,7 @@ export function Layout() {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="brand">
-          <span className="brand-icon">₹</span>
-          <span className="brand-name">Kharcha</span>
+          <Logo height={30} />
         </Link>
         <div className="header-actions">
           {user && <span className="user-greeting">Hi, {user.name}</span>}
