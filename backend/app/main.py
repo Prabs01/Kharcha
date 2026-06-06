@@ -8,6 +8,8 @@ from app.routers import users, groups, expenses, analytics
 from alembic.config import Config
 from alembic import command
 
+import os
+
 
 #lifecycle manager
 #before yield - At startup
@@ -15,7 +17,11 @@ from alembic import command
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.create_db_and_table()
-    alembic_cfg = Config("../alembic.ini")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    alembic_cfg = Config(os.path.join(BASE_DIR, "..", "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", os.path.join(BASE_DIR, "..", "alembic"))
+    
     command.upgrade(alembic_cfg, "head")
     yield
 
