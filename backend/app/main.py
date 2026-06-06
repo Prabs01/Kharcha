@@ -17,11 +17,12 @@ import os
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     models.create_db_and_table()
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    alembic_cfg = Config(os.path.join(BASE_DIR, "..", "alembic.ini"))
-    alembic_cfg.set_main_option("script_location", os.path.join(BASE_DIR, "..", "alembic"))
-    
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # /app/app
+    ROOT_DIR = os.path.dirname(BASE_DIR)                    # /app
+
+    alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "alembic"))
+
     command.upgrade(alembic_cfg, "head")
     yield
 
