@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import datetime, UTC
-from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+from sqlmodel import Field, Session, SQLModel, create_engine, Relationship, Column, Integer
 from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
@@ -82,7 +82,7 @@ class Token(SQLModel):
     token_type: str
 
 class Group(SQLModel, table= True):
-    id: int|None = Field(default= None, primary_key=True)
+    id: int|None = Field(default= None, sa_column=Column(Integer, primary_key=True, autoincrement=True))
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
 
     members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user", "cascade": "all, delete"})
