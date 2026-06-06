@@ -2,8 +2,10 @@ import axios from 'axios'
 
 const TOKEN_KEY = 'kharcha_token'
 
+const api_url: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export const api = axios.create({
-  baseURL: '',
+  baseURL: api_url,
   headers: { 'Content-Type': 'application/json' },
 })
 

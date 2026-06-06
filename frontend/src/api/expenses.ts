@@ -1,8 +1,10 @@
 import { api } from './client'
 import type { Expense, ExpenseCreate, ExpenseSplit } from './types'
 
+const api_url: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export async function listExpenses(groupId: number): Promise<Expense[]> {
-  const res = await api.get<Expense[]>(`/groups/${groupId}/expenses`)
+  const res = await api.get<Expense[]>(`${api_url}/groups/${groupId}/expenses`)
   return res.data
 }
 
@@ -10,7 +12,7 @@ export async function createExpense(
   groupId: number,
   data: ExpenseCreate,
 ): Promise<Expense> {
-  const res = await api.post<Expense>(`/groups/${groupId}/expenses`, data)
+  const res = await api.post<Expense>(`${api_url}/groups/${groupId}/expenses`, data)
   return res.data
 }
 
@@ -18,7 +20,7 @@ export async function deleteExpense(
   groupId: number,
   expenseId: number,
 ): Promise<void> {
-  await api.delete(`/groups/${groupId}/expenses/${expenseId}`)
+  await api.delete(`${api_url}/groups/${groupId}/expenses/${expenseId}`)
 }
 
 export async function listExpenseSplits(
@@ -26,7 +28,7 @@ export async function listExpenseSplits(
   expenseId: number,
 ): Promise<ExpenseSplit[]> {
   const res = await api.get<ExpenseSplit[]>(
-    `/groups/${groupId}/expenses/${expenseId}/splits`,
+    `${api_url}/groups/${groupId}/expenses/${expenseId}/splits`,
   )
   return res.data
 }

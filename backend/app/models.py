@@ -240,8 +240,13 @@ def create_db_and_table():
     SQLModel.metadata.create_all(engine)
 
 def get_session():
-    with Session(engine) as session:
-        yield session
+   with Session(engine) as session:
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
 
 # reusable alias
