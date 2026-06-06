@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     ROOT_DIR = os.path.dirname(BASE_DIR)                    # /app
 
     alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
-    alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "alembic"))
+    alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
 
     command.upgrade(alembic_cfg, "head")
     yield
