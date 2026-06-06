@@ -82,7 +82,7 @@ class Token(SQLModel):
     token_type: str
 
 class Group(SQLModel, table= True):
-    id: int|None = Field(default= True, primary_key=True)
+    id: int|None = Field(default= None, primary_key=True)
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
 
     members: Mapped[list[User]] = Relationship(back_populates="groups", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user", "cascade": "all, delete"})
