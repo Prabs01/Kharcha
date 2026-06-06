@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
 from pydantic import EmailStr, model_validator
+from app.config import settings
 
 
 class GroupMember(SQLModel, table = True):
@@ -230,15 +231,10 @@ class SettlementCreate(SQLModel):
     to_user_id: int
     amount: float
 
-sqlite_file_name = "database.db" 
-sqlite_url  = f"sqlite:///{sqlite_file_name}"
-
-
-#Using check_same_thread=False allows FastAPI to use the same SQLite database in different threads. This is necessary as one single request could use more than one thread (for example in dependencies).
-connect_arg= {"check_same_thread" : False} 
-engine = create_engine(sqlite_url, connect_args=connect_arg, pool_pre_ping=True) #pool_pre_ping checks if the connection is alive before using it, and reconnects if it's not. This can help prevent issues with stale connections in a long-running application.
-
-
+engine = create_engine(settings.database_url , echo = True
+ , pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20) #pool_pre_ping checks if the connection is alive before using it, pool_size is the number of connections to keep in the pool, max_overflow is the number of connections to allow in overflow (i.e. when the pool is full)
 
 def create_db_and_table():
     SQLModel.metadata.create_all(engine)
