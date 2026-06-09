@@ -1,6 +1,6 @@
 from enum import Enum
 from datetime import datetime, UTC
-from sqlmodel import Field, Session, SQLModel, create_engine, Relationship, Column, Integer
+from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
 from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
