@@ -37,7 +37,8 @@ def upgrade() -> None:
             sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
             sa.Column("name", sa.String(), nullable=False),
             sa.Column("email", sa.String(), nullable=False),
-            sa.Column("hashed_password", sa.String(), nullable=False),
+            sa.Column("hashed_password", sa.String(), nullable=True),
+            sa.Column("is_google_account", sa.Boolean(), nullable=False, server_default=sa.false()),
             sa.UniqueConstraint("email"),
         )
         op.create_index(op.f("ix_user_email"), "user", ["email"], unique=False)
