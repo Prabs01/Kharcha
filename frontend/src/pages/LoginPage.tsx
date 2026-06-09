@@ -3,13 +3,15 @@ import { Link, Navigate } from 'react-router-dom'
 import { getErrorMessage } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { Logo } from '../components/Logo'
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, login, loginWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [googleSubmitting, setGoogleSubmitting] = useState(false)
 
   if (user) return <Navigate to="/" replace />
 
@@ -26,6 +28,24 @@ export function LoginPage() {
     }
   }
 
+  async function handleGoogleSuccess(response: CredentialResponse) {
+    const credential = response.credential
+    if (!credential) {
+      setError('Google sign-in did not return a credential.')
+      return
+    }
+
+    setError('')
+    setGoogleSubmitting(true)
+    try {
+      await loginWithGoogle(credential)
+    } catch (err) {
+      setError(getErrorMessage(err))
+    } finally {
+      setGoogleSubmitting(false)
+    }
+  }
+
   return (
     <div className="auth-page">
       <aside className="auth-brand-panel">
@@ -38,6 +58,22 @@ export function LoginPage() {
         <div className="auth-header">
           <h1>Welcome back</h1>
           <p>Sign in to manage shared expenses</p>
+        </div>
+
+        <div className="auth-social">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('Google sign-in was cancelled or failed.')}
+            theme="outline"
+            size="large"
+            text="signin_with"
+            width={320}
+          />
+          {googleSubmitting && <p className="auth-social-status">Signing in with Google…</p>}
+        </div>
+
+        <div className="auth-divider">
+          <span>or use your email</span>
         </div>
 
         <form className="form" onSubmit={handleSubmit}>

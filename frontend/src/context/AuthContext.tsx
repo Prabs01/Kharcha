@@ -8,13 +8,14 @@ import {
   type ReactNode,
 } from 'react'
 import { clearStoredToken, getStoredToken, setStoredToken } from '../api/client'
-import { getCurrentUser, loginUser, registerUser } from '../api/users'
+import { getCurrentUser, loginUser, loginWithGoogle, registerUser } from '../api/users'
 import type { User, UserCreate } from '../api/types'
 
 interface AuthContextValue {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: (credential: string) => Promise<void>
   register: (data: UserCreate) => Promise<void>
   logout: () => void
 }
@@ -45,6 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(currentUser)
   }, [])
 
+  const loginWithGoogleCallback = useCallback(async (credential: string) => {
+    const token = await loginWithGoogle(credential)
+    setStoredToken(token.access_token)
+    const currentUser = await getCurrentUser()
+    setUser(currentUser)
+  }, [])
+
   const register = useCallback(async (data: UserCreate) => {
     await registerUser(data)
     await login(data.email, data.password)
@@ -56,8 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, loginWithGoogle: loginWithGoogleCallback, register, logout }),
+    [user, loading, login, loginWithGoogleCallback, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

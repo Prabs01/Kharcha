@@ -77,3 +77,7 @@ export interface Settlement {
   status: string
   settled_at: string
 }
+
+export interface GoogleLogin {
+  token: string
+}

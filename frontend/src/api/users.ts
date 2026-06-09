@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Token, User, UserCreate } from './types'
+import type { Token, User, UserCreate, GoogleLogin } from './types'
 
 const api_url: string = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -15,6 +15,11 @@ export async function loginUser(email: string, password: string): Promise<Token>
   const res = await api.post<Token>(`${api_url}/users/token`, params, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   })
+  return res.data
+}
+
+export async function loginWithGoogle(token: GoogleLogin): Promise<Token> {
+  const res = await api.post<Token>(`${api_url}/users/google`, { token })
   return res.data
 }
 

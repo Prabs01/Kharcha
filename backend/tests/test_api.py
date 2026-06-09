@@ -64,6 +64,29 @@ def login(client, email, password):
     return response.json()["access_token"]
 
 
+def test_google_login_creates_user_and_returns_token(client, monkeypatch):
+    def fake_verify_google_token(credential):
+        assert credential == "fake-google-token"
+        return {
+            "email": "new.user@example.com",
+            "name": "New User",
+        }
+
+    monkeypatch.setattr("app.routers.users.verify_google_token", fake_verify_google_token)
+
+    response = client.post(
+        "/users/google",
+        json={"credential": "fake-google-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["token_type"] == "bearer"
+
+    users_response = client.get("/users")
+    assert users_response.status_code == 200
+    assert any(user["email"] == "new.user@example.com" for user in users_response.json())
+
+
 def add_group(client, name, *, email, password):
     token = login(client, email, password)
     response = client.post(

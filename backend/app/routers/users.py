@@ -6,14 +6,18 @@ from typing import Annotated
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
 
+import logging
+
 from app.auth import (
     CurrentUser,
     hash_password,
     verify_password,
     create_access_token,
+    verify_google_token,
 )
 from app.config import settings
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/users",
@@ -41,11 +45,38 @@ async def create_user(user: models.UserCreate, session:models.SessionDep):
     
     return db_user
 
+@router.post("/google")
+async def google_login(payload: models.GoogleLogin, session: models.SessionDep):
+    logging.info("Received Google login request with credential: %s", payload.token)
+
+    user_info = verify_google_token(payload.token)
+
+    email = user_info.get("email")
+    name = user_info.get("name")
+    
+    user = session.exec(select(models.User).where(models.User.email == email)).first()
+
+    if not user:
+        if not email or not name:
+            raise HTTPException(status_code=400, detail="Google token is missing required user information")
+        user = models.User(name=name, email=email, hashed_password=None, is_google_account=True)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    
+    access_token = create_access_token(data={"sub": str(user.id)})
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @router.post("/token", response_model=models.Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: models.SessionDep): #Depends() is used to declare dependencies for the endpoint. In this case, it is used to get the form data for the login and the database session.
     user = session.exec(select(models.User).where(func.lower(models.User.email) == form_data.username.lower())).first()
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
+    if user.is_google_account:
+        raise HTTPException(status_code=400, detail="Please log in with Google")
+    if user.hashed_password is None:
+        raise HTTPException(status_code=400, detail="User signed up with Google, no password set. Please log in with Google.")
     if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 

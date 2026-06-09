@@ -39,7 +39,9 @@ class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
     name: str = Field(index = True)
     email: EmailStr = Field(unique=True, index=True)
-    hashed_password: str = Field(nullable=False) #hashed_password should not be nullable because every user must have a password
+    hashed_password: str | None = Field(nullable=True)
+
+    is_google_account: bool = Field(default=False) #This field is used to identify if the user is created through Google login or not. This can be useful for handling authentication and password management for users created through Google login.
 
     # explain: this is a one to many relationship where one user can pay for many expenses. 
     # The back_populates is used to specify the attribute on the other side of the relationship that will be used to access the related objects. 
@@ -76,6 +78,10 @@ class UserCreate(SQLModel):
     name: str
     email: EmailStr
     password: str = Field(min_length=8)
+
+
+class GoogleLogin(SQLModel):
+    token: str
 
 class Token(SQLModel):
     access_token: str

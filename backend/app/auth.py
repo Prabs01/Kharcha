@@ -10,6 +10,9 @@ from pwdlib import PasswordHash
 import app.models as models
 from app.config import settings
 
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 password_hash = PasswordHash.recommended()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/token") #only tells the Swagger UI where to go to get the token when you click on the "Authorize" button. It does not actually handle the authentication, that is done in the "/users/token" endpoint.
@@ -38,6 +41,14 @@ def verify_access_token(token: str) -> str | None:
         return payload.get("sub")
     except jwt.InvalidTokenError:
         return None
+
+def verify_google_token(token: str) -> dict:
+    """Verifies a Google ID token and returns the user info if valid."""
+    try:
+        id_info = id_token.verify_oauth2_token(token, requests.Request(), settings.google_client_id)
+        return id_info
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid Google token")
 
 
 async def get_current_user(

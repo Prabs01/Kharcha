@@ -1,4 +1,13 @@
 services:
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: kharcha
+    ports:
+      - "5432:5432"
   api:
     build: .
     ports:

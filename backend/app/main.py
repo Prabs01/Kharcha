@@ -9,6 +9,7 @@ from alembic.config import Config
 from alembic import command
 
 import os
+from app.logging import setup_logging
 
 
 #lifecycle manager
@@ -16,14 +17,22 @@ import os
 #after yield - At shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging()
     models.create_db_and_table()
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
-    ROOT_DIR = os.path.dirname(BASE_DIR)               
-    
-    alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
-    alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
 
-    command.upgrade(alembic_cfg, "head")
+    ENV = os.getenv("ENV", "development")
+
+
+    if ENV == "production":
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
+        ROOT_DIR = os.path.dirname(BASE_DIR)       
+
+
+        
+        alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
+        alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
+
+        command.upgrade(alembic_cfg, "head")
     yield
 
 app = FastAPI(lifespan= lifespan)
