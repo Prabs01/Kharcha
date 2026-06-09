@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -10,8 +8,9 @@ import {
 import { clearStoredToken, getStoredToken, setStoredToken } from '../api/client'
 import { getCurrentUser, loginUser, loginWithGoogle, registerUser } from '../api/users'
 import type { User, UserCreate } from '../api/types'
+import { AuthContext } from './useAuth'
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
@@ -19,8 +18,6 @@ interface AuthContextValue {
   register: (data: UserCreate) => Promise<void>
   logout: () => void
 }
-
-const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -47,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const loginWithGoogleCallback = useCallback(async (credential: string) => {
-    const token = await loginWithGoogle(credential)
+    const token = await loginWithGoogle({ token: credential })
     setStoredToken(token.access_token)
     const currentUser = await getCurrentUser()
     setUser(currentUser)
@@ -71,8 +68,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
-}
+
