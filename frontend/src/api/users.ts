@@ -19,7 +19,7 @@ export async function loginUser(email: string, password: string): Promise<Token>
 }
 
 export async function loginWithGoogle(token: GoogleLogin): Promise<Token> {
-  const res = await api.post<Token>(`${api_url}/users/google`, { token })
+  const res = await api.post<Token>(`${api_url}/users/google`, token)
   return res.data
 }
 
