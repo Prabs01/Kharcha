@@ -23,16 +23,16 @@ async def lifespan(app: FastAPI):
     ENV = os.getenv("ENV", "development")
 
 
-    if ENV == "production":
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
-        ROOT_DIR = os.path.dirname(BASE_DIR)       
+    # if ENV == "production":
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
+    ROOT_DIR = os.path.dirname(BASE_DIR)       
 
 
-        
-        alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
-        alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
+    
+    alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
 
-        command.upgrade(alembic_cfg, "head")
+    command.upgrade(alembic_cfg, "head")
     yield
 
 app = FastAPI(lifespan= lifespan)
