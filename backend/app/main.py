@@ -1,29 +1,28 @@
+import logging
+import os
 from contextlib import asynccontextmanager
+
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 import app.models as models
 
-from app.routers import users, groups, expenses, analytics
+from app.routers import analytics, expenses, groups, users
 
-from alembic.config import Config
-from alembic import command
+import app.log_config as log_config
 
-import os
-from app.logging import setup_logging
 
+logger = logging.getLogger(__name__)
 
 #lifecycle manager
 #before yield - At startup
 #after yield - At shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    setup_logging()
     models.create_db_and_table()
 
-    ENV = os.getenv("ENV", "development")
-
-
-    # if ENV == "production":
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
     ROOT_DIR = os.path.dirname(BASE_DIR)       
 
@@ -33,6 +32,10 @@ async def lifespan(app: FastAPI):
     alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
 
     command.upgrade(alembic_cfg, "head")
+
+    log_config.setup_logging()
+
+    logger.info("Database migrations applied successfully")
     yield
 
 app = FastAPI(lifespan= lifespan)

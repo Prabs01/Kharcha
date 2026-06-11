@@ -6,12 +6,15 @@ from typing import Annotated
 from sqlalchemy.orm import selectinload
 import app.services.expenses as expense_services
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(tags=["expenses"])
 
 
 #---- Expenses -----
-@router.post(path = '/groups/{group_id}/expenses', response_model = models.ExpenseRead)
+@router.post(path = '/groups/{group_id}/expenses', response_model = schemas.ExpenseRead)
 async def add_expense(
     group_id: int,
     expense: schemas.ExpenseCreate,
@@ -20,16 +23,19 @@ async def add_expense(
     db_group = session.get(models.Group, group_id)
     if not db_group:
         raise HTTPException(status_code = 404, detail = "Group not found")
+    logger.info("Adding expense to group %d: %s", group_id, expense)
 
     db_user = session.get(models.User, expense.paid_by_user_id)
     if not db_user:
         raise HTTPException(status_code = 404, detail = "User not found")
+    logger.info("Expense paid by user %d: %s", expense.paid_by_user_id, db_user)
 
     if not session.exec(
         select(models.GroupMember).where(models.GroupMember.group_id == group_id
             ).where(models.GroupMember.user_id == expense.paid_by_user_id)
         ).first():
         raise HTTPException(status_code = 400, detail = "User is not a member of the group")
+    logger.info("User %d is a member of group %d", expense.paid_by_user_id, group_id)
 
     db_expense = models.Expenses(
         group_id = group_id,
@@ -44,13 +50,14 @@ async def add_expense(
 
     if not db_expense.id:
         raise HTTPException(status_code = 500, detail = "Failed to create expense") 
+    logger.info("Created expense with id %d", db_expense.id)
 
-    output_expense = db_expense.to_read(db_user, db_group)
+    output_expense = db_expense.to_read(db_user.to_summary(), db_group.to_read())
     expense_services.split_expense(db_expense, expense.split_method, expense.split_participants, session)
 
     return output_expense
     
-@router.get(path = '/groups/{group_id}/expenses', response_model = list[models.ExpenseRead])
+@router.get(path = '/groups/{group_id}/expenses', response_model = list[schemas.ExpenseRead])
 async def read_expenses_from_group(
     group_id: int,
     session: models.SessionDep,
@@ -77,7 +84,7 @@ async def read_expenses_from_group(
     return output_expenses
 
 
-@router.get(path = '/groups/{group_id}/expenses/{expense_id}', response_model=models.ExpenseRead)
+@router.get(path = '/groups/{group_id}/expenses/{expense_id}', response_model=schemas.ExpenseRead)
 async def read_expense(
     group_id: int,
     expense_id: int,

@@ -5,9 +5,13 @@ from app.schemas import SplitMethod, SplitPartipant
 from fastapi import HTTPException
 from app.models import SessionDep
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def split_expense(expense: Expenses, split_method:SplitMethod, split_participants: List[SplitPartipant] | None, session:SessionDep):
 
+    logger.info("Splitting expense %d with method %s", expense.id, split_method)
     if split_method == SplitMethod.EQUAL:
         split_expense_equally(expense, session)
     elif split_method == SplitMethod.EXACT:
@@ -37,10 +41,12 @@ def split_expense_equally(expense: Expenses, session:SessionDep):
                 amount_paid = total_amount
             )
             session.add(split)
+            logger.info("Split added for payer: %s", split)
 
             if not split.id:
                 session.flush()  # Ensure the split ID is generated
-            print(f"Split added: {split}")
+                logger.info("Split ID generated: %d", split.id)
+            logger.info("Split added: %s", split)
 
         else:
             
@@ -57,7 +63,7 @@ def split_expense_equally(expense: Expenses, session:SessionDep):
 
             if not split.id:
                 session.flush()  # Ensure the split ID is generated
-            print(f"Split added: {split}")
+            logger.info("Split added: %s", split)
 
     session.commit()
     

@@ -113,6 +113,14 @@ class Group(SQLModel, table= True):
     expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated expenses will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
     settlements: Mapped[list["Settlement"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated settlements will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
 
+    def to_read(self):
+        assert self.id is not None
+
+        return GroupRead(
+            id = self.id,
+            name = self.name
+        )
+
 # class GroupCreate(SQLModel):
 #     name:str
 
