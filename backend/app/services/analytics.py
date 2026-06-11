@@ -1,4 +1,6 @@
 import app.models as models
+import app.schemas as schemas
+
 from fastapi import HTTPException
 
 from sqlmodel import select
@@ -25,7 +27,7 @@ def calculate_balance(group_id: int, session:models.SessionDep):
 
     settlements = group.settlements
     for settlement in settlements:
-        if settlement.status == models.Settlement_status.COMPLETED:
+        if settlement.status == schemas.SettlementStatus.COMPLETED:
             if settlement.from_user_id in member_ids:
                 balances[settlement.from_user_id] += settlement.amount
             if settlement.to_user_id in member_ids:

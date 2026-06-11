@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 import app.models as models
+import app.schemas as schemas
 from sqlmodel import select
 from typing import Annotated
 from sqlalchemy.orm import selectinload
@@ -13,7 +14,7 @@ router = APIRouter(tags=["expenses"])
 @router.post(path = '/groups/{group_id}/expenses', response_model = models.ExpenseRead)
 async def add_expense(
     group_id: int,
-    expense: models.ExpenseCreate,
+    expense: schemas.ExpenseCreate,
     session: models.SessionDep
 ):
     db_group = session.get(models.Group, group_id)
@@ -126,7 +127,7 @@ async def delete_expense(
 async def add_expense_split(
     group_id: int,
     expense_id: int,
-    split: models.ExpenseSplitsCreate,
+    split: schemas.ExpenseSplitsCreate,
     session: models.SessionDep,
 ):
     if not session.get(models.Group, group_id):

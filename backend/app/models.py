@@ -1,11 +1,28 @@
-from enum import Enum
 from datetime import datetime, UTC
-from sqlmodel import Field, Session, SQLModel, create_engine, Relationship
+
+from sqlmodel import (
+    Field, 
+    Session, 
+    SQLModel, 
+    create_engine, 
+    Relationship
+)
+
 from sqlalchemy.orm import Mapped
 from fastapi import Depends
 from typing import Annotated
-from pydantic import EmailStr, model_validator
+from pydantic import EmailStr
 from app.config import settings
+
+from app.schemas import (
+    GroupMemberRead,
+    UserSummary,
+    UserRead,
+    GroupRead,
+    ExpenseRead,
+    ExpenseSplitsRead,
+    SettlementStatus
+)
 
 
 class GroupMember(SQLModel, table = True):
@@ -21,19 +38,19 @@ class GroupMember(SQLModel, table = True):
 
         return GroupMemberRead(
             id = self.id,
-            user = UserRead.model_validate(user)
+            user = UserSummary.model_validate(user)
         )
 
-class GroupMemberRead(SQLModel):
-    id: int
-    user: "UserRead"
+# class GroupMemberRead(SQLModel):
+#     id: int
+#     user: "UserRead"
 
-class GroupMemberCreate(SQLModel):
-    user_id: int
+# class GroupMemberCreate(SQLModel):
+#     user_id: int
 
-class UserSummary(SQLModel):
-    id: int
-    name: str
+# class UserSummary(SQLModel):
+#     id: int
+#     name: str
 
 class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
@@ -69,23 +86,23 @@ class User(SQLModel, table = True):
         )
 
 
-class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
-    id: int
-    name: str
-    email: EmailStr
+# class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
+#     id: int
+#     name: str
+#     email: EmailStr
 
-class UserCreate(SQLModel):
-    name: str
-    email: EmailStr
-    password: str = Field(min_length=8)
+# class UserCreate(SQLModel):
+#     name: str
+#     email: EmailStr
+#     password: str = Field(min_length=8)
 
 
-class GoogleLogin(SQLModel):
-    token: str
+# class GoogleLogin(SQLModel):
+#     token: str
 
-class Token(SQLModel):
-    access_token: str
-    token_type: str
+# class Token(SQLModel):
+#     access_token: str
+#     token_type: str
 
 class Group(SQLModel, table= True):
     id: int|None = Field(default= None, primary_key=True)
@@ -96,22 +113,22 @@ class Group(SQLModel, table= True):
     expenses: Mapped[list["Expenses"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated expenses will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
     settlements: Mapped[list["Settlement"]] = Relationship(back_populates="group", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a group is deleted, all associated settlements will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
 
-class GroupCreate(SQLModel):
-    name:str
+# class GroupCreate(SQLModel):
+#     name:str
 
-class GroupRead(SQLModel):
-    id: int
-    name: str
+# class GroupRead(SQLModel):
+#     id: int
+#     name: str
 
-class SplitMethod(str, Enum):
-    EQUAL = "equal"
-    EXACT = "exact"
-    PERCENTAGE = "percentage"
+# class SplitMethod(str, Enum):
+#     EQUAL = "equal"
+#     EXACT = "exact"
+#     PERCENTAGE = "percentage"
 
-class SplitPartipant(SQLModel):
-    user_id: int
-    percentage:float | None = None
-    amount: float | None = None
+# class SplitPartipant(SQLModel):
+#     user_id: int
+#     percentage:float | None = None
+#     amount: float | None = None
 
 class Expenses(SQLModel, table = True):
     id: int| None = Field(default= None, primary_key=True)
@@ -132,37 +149,37 @@ class Expenses(SQLModel, table = True):
         return ExpenseRead(
             id = self.id,
             group = GroupRead.model_validate(group),
-            paid_by_user = UserRead.model_validate(paid_by_user),
+            paid_by_user = UserSummary.model_validate(paid_by_user),
             title = self.title,
             total_amount= self.total_amount,
             created_at= self.created_at
         )
 
 
-class ExpenseRead(SQLModel):
-    id: int
-    group: GroupRead
-    paid_by_user: UserRead
-    title: str
-    total_amount: float
-    created_at: datetime
+# class ExpenseRead(SQLModel):
+#     id: int
+#     group: GroupRead
+#     paid_by_user: UserRead
+#     title: str
+#     total_amount: float
+#     created_at: datetime
 
-class ExpenseCreate(SQLModel):
-    paid_by_user_id: int
-    title: str 
-    total_amount: float = Field(ge = 0)
-    split_method: SplitMethod = Field(default=SplitMethod.EQUAL)
-    split_participants: list[SplitPartipant] | None = None
+# class ExpenseCreate(SQLModel):
+#     paid_by_user_id: int
+#     title: str 
+#     total_amount: float = Field(ge = 0)
+#     split_method: SplitMethod = Field(default=SplitMethod.EQUAL)
+#     split_participants: list[SplitPartipant] | None = None
 
-    @model_validator(mode = "after")
-    def validate_split_participants(self):
-        if self.split_method in {
-            SplitMethod.EXACT,
-            SplitMethod.PERCENTAGE
-        } and not self.split_participants:
-            raise ValueError("split_participants is required for EXACT and PERCENTAGE split methods")
+#     @model_validator(mode = "after")
+#     def validate_split_participants(self):
+#         if self.split_method in {
+#             SplitMethod.EXACT,
+#             SplitMethod.PERCENTAGE
+#         } and not self.split_participants:
+#             raise ValueError("split_participants is required for EXACT and PERCENTAGE split methods")
 
-        return self
+#         return self
 
 class ExpenseSplits(SQLModel, table = True):
     id: int|None = Field(default= None, primary_key=True)
@@ -179,31 +196,31 @@ class ExpenseSplits(SQLModel, table = True):
 
         return ExpenseSplitsRead(
             id = self.id,
-            user = UserRead.model_validate(user),
+            user = UserSummary.model_validate(user),
             amount_owed = self.amount_owed,
             amount_paid=self.amount_paid
         )
 
-class ExpenseSplitsCreate(SQLModel):
-    user_id: int
-    amount_owed: float
-    amount_paid: float
+# class ExpenseSplitsCreate(SQLModel):
+#     user_id: int
+#     amount_owed: float
+#     amount_paid: float
 
-class ExpenseSplitsRead(SQLModel):
-    id: int
-    user: UserRead
-    amount_owed: float
-    amount_paid: float
+# class ExpenseSplitsRead(SQLModel):
+#     id: int
+#     user: UserRead
+#     amount_owed: float
+#     amount_paid: float
 
-class SettlementRead(SQLModel):
-    from_user: UserSummary
-    to_user: UserSummary
-    amount: float
+# class SettlementRead(SQLModel):
+#     from_user: UserSummary
+#     to_user: UserSummary
+#     amount: float
 
-class Settlement_status(str, Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    CANCELED = "canceled"
+# class Settlement_status(str, Enum):
+#     PENDING = "pending"
+#     COMPLETED = "completed"
+#     CANCELED = "canceled"
 
 class Settlement(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -223,7 +240,7 @@ class Settlement(SQLModel, table=True):
         ondelete="RESTRICT"
     )
 
-    status: Settlement_status = Field(default=Settlement_status.COMPLETED)
+    status: SettlementStatus = Field(default=SettlementStatus.COMPLETED)
 
     amount: float
 

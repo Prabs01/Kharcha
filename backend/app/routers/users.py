@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 import app.models as models
+import app.schemas as schemas
 from sqlmodel import select, func
 from typing import Annotated
 
@@ -24,8 +25,8 @@ router = APIRouter(
     tags=["users"]
 )
 
-@router.post(path='/', response_model = models.UserRead)
-async def create_user(user: models.UserCreate, session:models.SessionDep):
+@router.post(path='/', response_model = schemas.UserRead)
+async def create_user(user: schemas.UserCreate, session:models.SessionDep):
     db_user = models.User(
         name = user.name,
         email = user.email.lower() ,
@@ -46,7 +47,7 @@ async def create_user(user: models.UserCreate, session:models.SessionDep):
     return db_user
 
 @router.post("/google")
-async def google_login(payload: models.GoogleLogin, session: models.SessionDep):
+async def google_login(payload: schemas.GoogleLogin, session: models.SessionDep):
     logging.info("Received Google login request with credential: %s", payload.token)
 
     user_info = verify_google_token(payload.token)
@@ -68,7 +69,7 @@ async def google_login(payload: models.GoogleLogin, session: models.SessionDep):
 
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/token", response_model=models.Token)
+@router.post("/token", response_model=schemas.Token)
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: models.SessionDep): #Depends() is used to declare dependencies for the endpoint. In this case, it is used to get the form data for the login and the database session.
     user = session.exec(select(models.User).where(func.lower(models.User.email) == form_data.username.lower())).first()
     if not user:
@@ -83,14 +84,14 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], sess
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=access_token_expires)
 
-    return models.Token(access_token=access_token, token_type="bearer")
+    return schemas.Token(access_token=access_token, token_type="bearer")
 
-@router.get("/me", response_model=models.UserRead)
+@router.get("/me", response_model=schemas.UserRead)
 async def read_current_user(current_user: CurrentUser):
     return current_user
 
 
-@router.get('/', response_model = list[models.UserRead])
+@router.get('/', response_model = list[schemas.UserRead])
 async def read_users(
     session: models.SessionDep,
     offset: int = 0,
@@ -99,7 +100,7 @@ async def read_users(
     users = session.exec(select(models.User).offset(offset).limit(limit)).all()
     return users
 
-@router.get(path="/{user_id}", response_model = models.UserRead)
+@router.get(path="/{user_id}", response_model = schemas.UserRead)
 async def read_user(user_id:int, session: models.SessionDep):
     user = session.get(models.User, user_id)
     if not user:

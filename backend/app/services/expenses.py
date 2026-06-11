@@ -1,5 +1,6 @@
 from typing import List
-from app.models import Expenses, ExpenseSplits, SplitMethod, SplitPartipant
+from app.models import Expenses, ExpenseSplits
+from app.schemas import SplitMethod, SplitPartipant
 
 from fastapi import HTTPException
 from app.models import SessionDep

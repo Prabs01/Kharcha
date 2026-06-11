@@ -1,5 +1,6 @@
 from fastapi import HTTPException, Body
-from app.models import SessionDep, Group, GroupMember, GroupMemberCreate, User
+from app.models import SessionDep, Group, GroupMember, User
+from app.schemas import GroupMemberCreate
 from app.auth import CurrentUser
 
 from sqlmodel import select
