@@ -52,7 +52,7 @@ async def add_expense(
         raise HTTPException(status_code = 500, detail = "Failed to create expense") 
     logger.info("Created expense with id %d", db_expense.id)
 
-    output_expense = db_expense.to_read(db_user.to_summary(), db_group.to_read())
+    output_expense = db_expense.to_read(db_user, db_group)
     expense_services.split_expense(db_expense, expense.split_method, expense.split_participants, session)
 
     return output_expense

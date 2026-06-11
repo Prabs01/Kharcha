@@ -156,8 +156,8 @@ class Expenses(SQLModel, table = True):
 
         return ExpenseRead(
             id = self.id,
-            group = GroupRead.model_validate(group),
-            paid_by_user = UserSummary.model_validate(paid_by_user),
+            group = GroupRead.model_validate(group.to_read()),
+            paid_by_user = UserSummary.model_validate(paid_by_user.to_summary()),
             title = self.title,
             total_amount= self.total_amount,
             created_at= self.created_at
