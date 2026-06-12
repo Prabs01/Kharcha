@@ -4,7 +4,7 @@ from sqlmodel import SQLModel, create_engine, Session
 from sqlalchemy.pool import StaticPool
 
 import app.main as main
-import app.models as models
+import app.db as db
 
 @pytest.fixture()
 def client():
@@ -15,8 +15,8 @@ def client():
     )
 
     # attach test engine
-    models.engine = test_engine
-    models.engine = test_engine
+    db.engine = test_engine
+    db.engine = test_engine
 
     # recreate tables
     SQLModel.metadata.create_all(test_engine)
@@ -26,7 +26,7 @@ def client():
         with Session(test_engine) as session:
             yield session
 
-    main.app.dependency_overrides[models.get_session] = override_get_session
+    main.app.dependency_overrides[db.get_session] = override_get_session
 
     with TestClient(main.app) as test_client:
         yield test_client

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 import app.models as models
+import app.db as db
 import app.schemas as schemas
 from sqlmodel import select
 from typing import Annotated
@@ -18,7 +19,7 @@ router = APIRouter(tags=["expenses"])
 async def add_expense(
     group_id: int,
     expense: schemas.ExpenseCreate,
-    session: models.SessionDep
+    session: db.SessionDep
 ):
     db_group = session.get(models.Group, group_id)
     if not db_group:
@@ -60,7 +61,7 @@ async def add_expense(
 @router.get(path = '/groups/{group_id}/expenses', response_model = list[schemas.ExpenseRead])
 async def read_expenses_from_group(
     group_id: int,
-    session: models.SessionDep,
+    session: db.SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le = 100)] = 100
 ):
@@ -88,7 +89,7 @@ async def read_expenses_from_group(
 async def read_expense(
     group_id: int,
     expense_id: int,
-    session: models.SessionDep,
+    session: db.SessionDep,
 ):
     db_group = session.get(models.Group, group_id)
     if not db_group:
@@ -111,7 +112,7 @@ async def read_expense(
 async def delete_expense(
     group_id: int,
     expense_id: int,
-    session: models.SessionDep,
+    session: db.SessionDep,
 ):
     if not session.get(models.Group, group_id):
         raise HTTPException(status_code = 404, detail = "Group not found")
@@ -135,7 +136,7 @@ async def add_expense_split(
     group_id: int,
     expense_id: int,
     split: schemas.ExpenseSplitsCreate,
-    session: models.SessionDep,
+    session: db.SessionDep,
 ):
     if not session.get(models.Group, group_id):
         raise HTTPException(status_code = 404, detail = "Group not found")
@@ -180,7 +181,7 @@ async def add_expense_split(
 async def read_expense_splits(
     group_id: int,
     expense_id: int,
-    session: models.SessionDep,
+    session: db.SessionDep,
     offset: int = 0,
     limit: Annotated[int, Query(le = 100)] = 100
 ):

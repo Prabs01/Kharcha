@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 
 import app.models as models
+import app.db as db
 from app.config import settings
 
 from google.oauth2 import id_token
@@ -53,7 +54,7 @@ def verify_google_token(token: str) -> dict:
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    session: models.SessionDep,
+    session: db.SessionDep,
 ) -> models.User:
     user_id = verify_access_token(token)
     if user_id is None:

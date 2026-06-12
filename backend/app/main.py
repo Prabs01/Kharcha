@@ -7,7 +7,7 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-import app.models as models
+import app.db as db
 
 from app.routers import analytics, expenses, groups, users
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 #after yield - At shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    models.create_db_and_table()
+    db.create_db_and_table()
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
     ROOT_DIR = os.path.dirname(BASE_DIR)       

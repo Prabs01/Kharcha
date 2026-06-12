@@ -1,5 +1,6 @@
 import app.models as models
 import app.schemas as schemas
+import app.db as db
 
 from fastapi import HTTPException
 
@@ -7,7 +8,7 @@ from sqlmodel import select
 
 
 
-def calculate_balance(group_id: int, session:models.SessionDep):
+def calculate_balance(group_id: int, session:db.SessionDep):
 
     group = session.get(models.Group, group_id)
 
@@ -40,7 +41,7 @@ def calculate_balance(group_id: int, session:models.SessionDep):
     ]
 
 
-def calculate_settlement(group_id: int, session:models.SessionDep):
+def calculate_settlement(group_id: int, session:db.SessionDep):
 
     balances = calculate_balance(group_id, session)
 
@@ -67,7 +68,7 @@ def calculate_settlement(group_id: int, session:models.SessionDep):
 
     return settlements
 
-def create_settlement(group_id: int, payload: models.SettlementCreate, session: models.SessionDep):
+def create_settlement(group_id: int, payload: models.SettlementCreate, session: db.SessionDep):
 
     if not session.get(models.Group, group_id):
         raise HTTPException(status_code= 404, detail = "Group not found")

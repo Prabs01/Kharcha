@@ -2,17 +2,12 @@ from datetime import datetime, UTC
 
 from sqlmodel import (
     Field, 
-    Session, 
     SQLModel, 
-    create_engine, 
     Relationship
 )
 
 from sqlalchemy.orm import Mapped
-from fastapi import Depends
-from typing import Annotated
 from pydantic import EmailStr
-from app.config import settings
 
 from app.schemas import (
     GroupMemberRead,
@@ -41,16 +36,6 @@ class GroupMember(SQLModel, table = True):
             user = UserSummary.model_validate(user)
         )
 
-# class GroupMemberRead(SQLModel):
-#     id: int
-#     user: "UserRead"
-
-# class GroupMemberCreate(SQLModel):
-#     user_id: int
-
-# class UserSummary(SQLModel):
-#     id: int
-#     name: str
 
 class User(SQLModel, table = True):
     id: int|None = Field(default = None, primary_key = True)
@@ -86,24 +71,6 @@ class User(SQLModel, table = True):
         )
 
 
-# class UserRead(SQLModel): #UseOut is just a output schema so 'table = False'
-#     id: int
-#     name: str
-#     email: EmailStr
-
-# class UserCreate(SQLModel):
-#     name: str
-#     email: EmailStr
-#     password: str = Field(min_length=8)
-
-
-# class GoogleLogin(SQLModel):
-#     token: str
-
-# class Token(SQLModel):
-#     access_token: str
-#     token_type: str
-
 class Group(SQLModel, table= True):
     id: int|None = Field(default= None, primary_key=True)
     name: str = Field(index= True) #putting index makes filtering more efficient later but slows down insert/deletes
@@ -121,22 +88,6 @@ class Group(SQLModel, table= True):
             name = self.name
         )
 
-# class GroupCreate(SQLModel):
-#     name:str
-
-# class GroupRead(SQLModel):
-#     id: int
-#     name: str
-
-# class SplitMethod(str, Enum):
-#     EQUAL = "equal"
-#     EXACT = "exact"
-#     PERCENTAGE = "percentage"
-
-# class SplitPartipant(SQLModel):
-#     user_id: int
-#     percentage:float | None = None
-#     amount: float | None = None
 
 class Expenses(SQLModel, table = True):
     id: int| None = Field(default= None, primary_key=True)
@@ -164,30 +115,6 @@ class Expenses(SQLModel, table = True):
         )
 
 
-# class ExpenseRead(SQLModel):
-#     id: int
-#     group: GroupRead
-#     paid_by_user: UserRead
-#     title: str
-#     total_amount: float
-#     created_at: datetime
-
-# class ExpenseCreate(SQLModel):
-#     paid_by_user_id: int
-#     title: str 
-#     total_amount: float = Field(ge = 0)
-#     split_method: SplitMethod = Field(default=SplitMethod.EQUAL)
-#     split_participants: list[SplitPartipant] | None = None
-
-#     @model_validator(mode = "after")
-#     def validate_split_participants(self):
-#         if self.split_method in {
-#             SplitMethod.EXACT,
-#             SplitMethod.PERCENTAGE
-#         } and not self.split_participants:
-#             raise ValueError("split_participants is required for EXACT and PERCENTAGE split methods")
-
-#         return self
 
 class ExpenseSplits(SQLModel, table = True):
     id: int|None = Field(default= None, primary_key=True)
@@ -209,26 +136,6 @@ class ExpenseSplits(SQLModel, table = True):
             amount_paid=self.amount_paid
         )
 
-# class ExpenseSplitsCreate(SQLModel):
-#     user_id: int
-#     amount_owed: float
-#     amount_paid: float
-
-# class ExpenseSplitsRead(SQLModel):
-#     id: int
-#     user: UserRead
-#     amount_owed: float
-#     amount_paid: float
-
-# class SettlementRead(SQLModel):
-#     from_user: UserSummary
-#     to_user: UserSummary
-#     amount: float
-
-# class Settlement_status(str, Enum):
-#     PENDING = "pending"
-#     COMPLETED = "completed"
-#     CANCELED = "canceled"
 
 class Settlement(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -261,25 +168,3 @@ class SettlementCreate(SQLModel):
     from_user_id: int
     to_user_id: int
     amount: float
-
-engine = create_engine(settings.database_url , echo = True
- , pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20) #pool_pre_ping checks if the connection is alive before using it, pool_size is the number of connections to keep in the pool, max_overflow is the number of connections to allow in overflow (i.e. when the pool is full)
-
-def create_db_and_table():
-    SQLModel.metadata.create_all(engine)
-
-def get_session():
-   with Session(engine) as session:
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-
-
-# reusable alias
-SessionDep = Annotated[Session, Depends(get_session)]
-

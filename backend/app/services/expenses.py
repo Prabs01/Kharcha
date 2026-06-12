@@ -3,7 +3,7 @@ from app.models import Expenses, ExpenseSplits
 from app.schemas import SplitMethod, SplitPartipant
 
 from fastapi import HTTPException
-from app.models import SessionDep
+from app.db import SessionDep
 
 import logging
 logger = logging.getLogger(__name__)

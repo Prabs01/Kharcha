@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 
 import app.models as models
+import app.db as db
 import app.schemas as schemas
 from typing import Annotated
 
@@ -16,7 +17,7 @@ router = APIRouter(tags=["groups"])
 @router.post(path = "/groups", response_model=models.GroupRead)
 async def create_group(
     group: schemas.GroupCreate,
-    session: models.SessionDep,
+    session: db.SessionDep,
     current_user: CurrentUser,
 ):
     db_group = models.Group(name=group.name)
