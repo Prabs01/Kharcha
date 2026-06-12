@@ -34,7 +34,7 @@ class GroupMember(SQLModel, table = True):
 
         return GroupMemberRead(
             id = self.id,
-            user = UserSummary.model_validate(user)
+            user = UserSummary.model_validate(user.to_summary())
         )
 
 
