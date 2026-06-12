@@ -1,3 +1,4 @@
+from decimal import Decimal
 from datetime import datetime, UTC
 
 from sqlmodel import (
@@ -94,7 +95,7 @@ class Expenses(SQLModel, table = True):
     group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
     paid_by_user_id: int = Field(foreign_key="user.id", ondelete="RESTRICT") 
     title: str = Field(index = True)
-    total_amount: float = Field(ge = 0)
+    total_amount: Decimal = Field(ge = 0, max_digits=10, decimal_places=2)
     created_at: datetime = Field(default_factory= lambda : datetime.now(UTC))
 
     paid_by_user : Mapped["User"] = Relationship(back_populates="expenses_paid")
@@ -120,8 +121,8 @@ class ExpenseSplits(SQLModel, table = True):
     id: int|None = Field(default= None, primary_key=True)
     expense_id: int = Field(foreign_key="expenses.id", ondelete="CASCADE", nullable=False) #expense_id should not be nullable because every split must be associated with an expense
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
-    amount_owed: float
-    amount_paid: float
+    amount_owed: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+    amount_paid: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
  
     expense: Mapped["Expenses"] = Relationship(back_populates="splits")
     user: Mapped["User"] = Relationship(back_populates="splits")
@@ -157,7 +158,7 @@ class Settlement(SQLModel, table=True):
 
     status: SettlementStatus = Field(default=SettlementStatus.COMPLETED)
 
-    amount: float
+    amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
     settled_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC)
@@ -167,4 +168,4 @@ class Settlement(SQLModel, table=True):
 class SettlementCreate(SQLModel):
     from_user_id: int
     to_user_id: int
-    amount: float
+    amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)

@@ -5,6 +5,8 @@ from app.schemas import SplitMethod, SplitPartipant
 from fastapi import HTTPException
 from app.db import SessionDep
 
+from decimal import Decimal
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def split_expense_equally(expense: Expenses, session:SessionDep):
                 expense_id = expense.id,
                 user_id = user.id,
                 amount_owed = split_amount,
-                amount_paid = 0
+                amount_paid = Decimal(0)
             )
             session.add(split)
 
@@ -78,7 +80,13 @@ def split_expense_exact(expense: Expenses, split_participants: List[SplitPartipa
     if not splits:
         raise HTTPException(status_code=422, detail="Splits must be provided for exact split method")
 
-    total_split_amount = sum(split.amount for split in splits)
+    if any(split.amount is None for split in splits):
+        raise HTTPException(status_code=422, detail="Each split must include amount for exact split method")
+
+    total_split_amount = sum(
+        (split.amount for split in splits if split.amount is not None),
+        Decimal(0),
+    )
 
     if total_amount != total_split_amount:
         raise HTTPException(status_code=422, detail="Total split amount does not match the total expense amount")
@@ -93,7 +101,7 @@ def split_expense_exact(expense: Expenses, split_participants: List[SplitPartipa
             expense_id = expense.id,
             user_id = split.user_id,
             amount_owed = split.amount,
-            amount_paid = total_split_amount if split.user_id == expense.paid_by_user_id else 0
+            amount_paid = total_split_amount if split.user_id == expense.paid_by_user_id else Decimal(0)
         )
         session.add(db_split)
         if not db_split.id:
@@ -127,7 +135,7 @@ def split_expense_percentage(expense: Expenses, split_participants: List[SplitPa
             expense_id = expense.id,
             user_id = split.user_id,
             amount_owed = split_amount,
-            amount_paid = total_amount if split.user_id == expense.paid_by_user_id else 0
+            amount_paid = total_amount if split.user_id == expense.paid_by_user_id else Decimal(0)
         )
         session.add(db_split)
         if not db_split.id:

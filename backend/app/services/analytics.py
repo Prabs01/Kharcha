@@ -2,6 +2,8 @@ import app.models as models
 import app.schemas as schemas
 import app.db as db
 
+from decimal import Decimal
+
 from fastapi import HTTPException
 
 from sqlmodel import select
@@ -18,7 +20,7 @@ def calculate_balance(group_id: int, session:db.SessionDep):
     expenses = group.expenses
     member_ids = [x.id for x in group.members]
 
-    balances = {member_id:0.0 for member_id in member_ids if member_id is not None}
+    balances: dict[int, Decimal] = {member_id: Decimal(0) for member_id in member_ids if member_id is not None}
 
     for expense in expenses:
         for split in expense.splits:

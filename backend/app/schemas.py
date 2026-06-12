@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from enum import Enum
 from datetime import datetime
@@ -44,21 +45,21 @@ class SplitMethod(str, Enum):
 
 class SplitPartipant(BaseModel):
     user_id: int
-    percentage: float|None = None
-    amount: float|None = None
+    percentage: Decimal|None = None
+    amount: Decimal|None = Field(default = None, ge=0, max_digits=10, decimal_places=2)
 
 class ExpenseRead(BaseModel):
     id: int
     group: GroupRead
     title: str
     paid_by_user: UserSummary
-    total_amount: float
+    total_amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
     created_at: datetime
 
 class ExpenseCreate(BaseModel):
     title: str
     paid_by_user_id: int
-    total_amount: float = Field(ge=0)
+    total_amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
     split_method: SplitMethod = SplitMethod.EQUAL
     split_participants: list[SplitPartipant] | None = None
 
@@ -73,19 +74,19 @@ class ExpenseCreate(BaseModel):
 
 class ExpenseSplitsCreate(BaseModel):
     user_id: int
-    amount_owed: float
-    amount_paid: float
+    amount_owed: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+    amount_paid: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
 class ExpenseSplitsRead(BaseModel):
     id: int
     user: UserSummary
-    amount_owed: float
-    amount_paid: float
+    amount_owed: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+    amount_paid: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
 class SettlementRead(BaseModel):
     from_user: UserSummary
     to_user: UserSummary
-    amount: float
+    amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
 class SettlementStatus(str, Enum):
     PENDING = "pending"
@@ -95,5 +96,5 @@ class SettlementStatus(str, Enum):
 class SettlementCreate(BaseModel):
     from_user_id: int
     to_user_id: int
-    amount: float
+    amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
