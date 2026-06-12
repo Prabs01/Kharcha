@@ -23,15 +23,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     db.create_db_and_table()
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))  
+    BASE_DIR: str = os.path.dirname(os.path.abspath(__file__))  
     ROOT_DIR = os.path.dirname(BASE_DIR)       
 
-
-    
     alembic_cfg = Config(os.path.join(ROOT_DIR, "alembic.ini"))
     alembic_cfg.set_main_option("script_location", os.path.join(ROOT_DIR, "migrations"))
 
-    command.upgrade(alembic_cfg, "head")
+    command.upgrade(alembic_cfg, revision="head")
 
     log_config.setup_logging()
 
