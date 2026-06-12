@@ -132,7 +132,7 @@ class ExpenseSplits(SQLModel, table = True):
 
         return ExpenseSplitsRead(
             id = self.id,
-            user = UserSummary.model_validate(user),
+            user = UserSummary.model_validate(user.to_summary()),
             amount_owed = self.amount_owed,
             amount_paid=self.amount_paid
         )
