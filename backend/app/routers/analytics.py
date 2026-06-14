@@ -1,5 +1,6 @@
 from sqlmodel import select
 from fastapi import APIRouter
+import app.schemas as schemas
 import app.models as models
 import app.db as db
 from fastapi import HTTPException
@@ -17,7 +18,7 @@ async def get_group_balances(group_id: int, session: db.SessionDep):
 
 
 @router.post('/groups/{group_id}/settlements')
-async def create_group_settlement(group_id: int, payload: models.SettlementCreate, session: db.SessionDep):
+async def create_group_settlement(group_id: int, payload: schemas.SettlementCreate, session: db.SessionDep):
     
     settlement = analytics_service.create_settlement(group_id, payload, session)
 

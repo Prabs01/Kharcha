@@ -53,6 +53,7 @@ class User(SQLModel, table = True):
     groups : Mapped[list["Group"]] = Relationship(back_populates="members", link_model=GroupMember, sa_relationship_kwargs={"overlaps": "memberships,user,group", "cascade": "all, delete"})
     memberships: Mapped[list[GroupMember]] = Relationship(back_populates="user", sa_relationship_kwargs={"overlaps": "groups", "cascade": "all, delete-orphan"})
     splits: Mapped[list["ExpenseSplits"]] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}) #This means that when a user is deleted, all associated splits will also be deleted. This helps maintain data integrity and prevents orphaned records in the database.
+    friendships: Mapped[list["Friendship"]] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
     def to_read(self):
         assert self.id is not None
@@ -164,8 +165,11 @@ class Settlement(SQLModel, table=True):
         default_factory=lambda: datetime.now(UTC)
     )
     group: Mapped["Group"] = Relationship(back_populates="settlements")
-    
-class SettlementCreate(SQLModel):
-    from_user_id: int
-    to_user_id: int
-    amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+
+class Friendship(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    friend_user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+
+    user: Mapped["User"] = Relationship(back_populates="friendships", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    friend: Mapped["User"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan"})

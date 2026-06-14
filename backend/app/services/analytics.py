@@ -70,7 +70,7 @@ def calculate_settlement(group_id: int, session:db.SessionDep):
 
     return settlements
 
-def create_settlement(group_id: int, payload: models.SettlementCreate, session: db.SessionDep):
+def create_settlement(group_id: int, payload: schemas.SettlementCreate, session: db.SessionDep):
 
     if not session.get(models.Group, group_id):
         raise HTTPException(status_code= 404, detail = "Group not found")

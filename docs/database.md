@@ -66,7 +66,7 @@ Columns:
 - `group_id`: foreign key to `group.id`, `ON DELETE CASCADE`
 - `paid_by_user_id`: foreign key to `user.id`, `ON DELETE RESTRICT`
 - `title`: indexed string
-- `total_amount`: non-negative float
+- `total_amount`: non-negative Decimal
 - `created_at`: timestamp set at creation time
 
 Notes:
@@ -82,8 +82,8 @@ Columns:
 - `id`: primary key
 - `expense_id`: foreign key to `expenses.id`, `ON DELETE CASCADE`
 - `user_id`: foreign key to `user.id`, `ON DELETE CASCADE`
-- `amount_owed`: float
-- `amount_paid`: float
+- `amount_owed`: Decimal
+- `amount_paid`: Decimal
 
 Notes:
 - Deleting an expense removes all of its splits.
@@ -99,7 +99,7 @@ Columns:
 - `from_user_id`: foreign key to `user.id`, `ON DELETE RESTRICT`
 - `to_user_id`: foreign key to `user.id`, `ON DELETE RESTRICT`
 - `status`: stored as a string, values defined by `SettlementStatus`
-- `amount`: float
+- `amount`: Decimal
 - `settled_at`: timestamp set at creation time
 
 Notes:
