@@ -17,7 +17,8 @@ from app.schemas import (
     GroupRead,
     ExpenseRead,
     ExpenseSplitsRead,
-    SettlementStatus
+    SettlementStatus,
+    FriendshipStatus
 )
 
 
@@ -166,10 +167,29 @@ class Settlement(SQLModel, table=True):
     )
     group: Mapped["Group"] = Relationship(back_populates="settlements")
 
-class Friendship(SQLModel, table=True):
+class FriendshipRequest(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
-    friend_user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    
+    sender_id: int = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE"
+    )
+    receiver_id: int = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE"
+    )
 
-    user: Mapped["User"] = Relationship(back_populates="friendships", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    friend: Mapped["User"] = Relationship(sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    status: FriendshipStatus = Field(default=FriendshipStatus.PENDING)
+
+class Friendship(SQLModel, table=True):
+    user_low_id: int = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        primary_key=True
+    )
+
+    user_high_id: int = Field(
+        foreign_key="user.id",
+        ondelete="CASCADE",
+        primary_key=True
+    )

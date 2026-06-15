@@ -98,3 +98,7 @@ class SettlementCreate(BaseModel):
     to_user_id: int
     amount: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
 
+class FriendshipStatus(str, Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
