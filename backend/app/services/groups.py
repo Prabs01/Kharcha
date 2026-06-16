@@ -1,5 +1,5 @@
 from fastapi import HTTPException, Body
-from app.models import Group, GroupMember, User
+from app.models import Group, GroupMember, User, Friendship
 from app.db import SessionDep
 from app.schemas import GroupMemberCreate
 from app.auth import CurrentUser
@@ -48,6 +48,9 @@ def get_groups_for_user(current_user: CurrentUser, session: SessionDep):
 
 def add_member_to_group(group_id: int, current_user: CurrentUser, session: SessionDep, user: GroupMemberCreate = Body()):
 
+    if not current_user.id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     group = session.get(Group, group_id)
 
     if not group:
@@ -63,6 +66,15 @@ def add_member_to_group(group_id: int, current_user: CurrentUser, session: Sessi
 
     if current_user not in members:
         raise HTTPException(status_code=403, detail="You are not a member of this group")
+
+    friendships = session.exec(
+        select(Friendship).where(
+            (Friendship.user_low_id == min(current_user.id, user.user_id)) &
+            (Friendship.user_high_id == max(current_user.id, user.user_id))
+        )    ).first()
+    
+    if not friendships:
+        raise HTTPException(status_code=403, detail="You can only add friends to the group")
     
     group_member = GroupMember(group_id=group_id, user_id=user.user_id)
     session.add(group_member)
