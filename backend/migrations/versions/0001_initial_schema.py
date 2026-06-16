@@ -86,6 +86,15 @@ def upgrade() -> None:
             sa.Column("settled_at", sa.DateTime(), nullable=False),
         )
 
+    if "friendship" not in existing_tables:
+        op.create_table(
+            "friendship",
+            sa.Column("id", sa.Integer(), sa.Identity(), primary_key=True, nullable=False),
+            sa.Column("user_low_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("user_high_id", sa.Integer(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
+            sa.UniqueConstraint("user_low_id", "user_high_id"),
+        )
+
 
 def downgrade() -> None:
     op.drop_table("settlement")
@@ -98,3 +107,4 @@ def downgrade() -> None:
     op.drop_table("user")
     op.drop_index(op.f("ix_group_name"), table_name="group")
     op.drop_table("group")
+    op.drop_table("friendship")
